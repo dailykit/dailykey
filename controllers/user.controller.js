@@ -19,6 +19,7 @@ const login = async (req, res) => {
     const user = await User.findOne({ email });
     data.id = user._id;
     data.name = user.firstname + " " + user.lastname;
+    if (!user.addresses.length) data.redirect = true;
     return res.json({
       success: true,
       message: "Logged in",
@@ -87,7 +88,7 @@ const signup = async (req, res) => {
       data: {
         username: email,
         enabled: true,
-        emailVerified: true,
+        // emailVerified: true,
         firstName: firstname,
         lastName: lastname,
         email: email,
@@ -121,10 +122,7 @@ const signup = async (req, res) => {
       return res.json({
         success: true,
         message: "Account created",
-        data: {
-          id: user._id,
-          name: user.firstname + " " + user.lastname
-        }
+        data: null
       });
     }
   } catch (err) {
