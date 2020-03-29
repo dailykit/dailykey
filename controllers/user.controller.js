@@ -89,7 +89,7 @@ const signup = async (req, res) => {
       data: {
         username: email,
         enabled: true,
-        emailVerified: true,
+        // emailVerified: true,
         firstName: firstname,
         lastName: lastname,
         email: email,
@@ -99,7 +99,7 @@ const signup = async (req, res) => {
             value: password
           }
         ],
-        // requiredActions: ["VERIFY_EMAIL"],
+        requiredActions: ["VERIFY_EMAIL"],
         notBefore: 0,
         attributes: {
           phone: [phone]
