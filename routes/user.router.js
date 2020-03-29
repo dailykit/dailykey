@@ -7,5 +7,6 @@ router.route("/refresh-token").post(controller.refreshToken);
 router.route("/save-address").post(controller.saveAddress);
 router.route("/payment-intent").post(controller.paymentIntent);
 router.route("/save-card").post(controller.saveCard);
+// router.route("/charge-user").post(controller.chargeUser);
 
 module.exports = router;

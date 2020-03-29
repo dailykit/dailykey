@@ -2,6 +2,7 @@ const User = require("../models/user.model");
 const Address = require("../models/address.model");
 const axios = require("axios");
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
+const { charge } = require("../utils");
 
 const login = async (req, res) => {
   try {
@@ -88,7 +89,7 @@ const signup = async (req, res) => {
       data: {
         username: email,
         enabled: true,
-        // emailVerified: true,
+        emailVerified: true,
         firstName: firstname,
         lastName: lastname,
         email: email,
@@ -98,7 +99,7 @@ const signup = async (req, res) => {
             value: password
           }
         ],
-        requiredActions: ["VERIFY_EMAIL"],
+        // requiredActions: ["VERIFY_EMAIL"],
         notBefore: 0,
         attributes: {
           phone: [phone]
@@ -187,11 +188,31 @@ const saveCard = async (req, res) => {
     // This will change later
     // We'll make API req to stripe for fetching some card details like 4 digits, exp date. etc.
     // It is not allowing that not test accounts maybe
-    user.cards = [...user.cards, req.body.card];
+    console.log(req.body.payment_method);
+    user.cards = [...user.cards, req.body.payment_method];
     await user.save();
     return res.json({
       success: true,
       message: "Card saved",
+      data: null
+    });
+  } catch (err) {
+    return res.json({
+      success: false,
+      message: err.message,
+      data: null
+    });
+  }
+};
+
+const chargeUser = async (req, res) => {
+  try {
+    const user = await User.findOne({ _id: "5e80b0af1972a41cacd4b762" });
+    const result = await charge(user.stripe_id, user.cards[0], 1, "ORDER_ID");
+    console.log(result);
+    return res.json({
+      success: true,
+      message: "User charged",
       data: null
     });
   } catch (err) {
@@ -209,5 +230,6 @@ module.exports = {
   saveCard,
   saveAddress,
   paymentIntent,
-  refreshToken
+  refreshToken,
+  chargeUser
 };
