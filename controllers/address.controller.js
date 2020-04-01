@@ -1,6 +1,25 @@
 const Address = require("../models/address.model");
 const User = require("../models/user.model");
 
+const fetch = async (req, res) => {
+  try {
+    const addresses = await Address.find({ user: req.params.id });
+    return res.json({
+      success: true,
+      message: "Addresses fetched!",
+      data: {
+        addresses
+      }
+    });
+  } catch (err) {
+    return res.json({
+      success: false,
+      message: err.message,
+      data: null
+    });
+  }
+};
+
 const save = async (req, res) => {
   try {
     const { address, id } = req.body;
@@ -124,6 +143,7 @@ const remove = async (req, res) => {
 };
 
 module.exports = {
+  fetch,
   save,
   update,
   _default,

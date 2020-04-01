@@ -2,6 +2,25 @@ const Card = require("../models/card.model");
 const User = require("../models/user.model");
 const stripe = require("stripe")(process.env.STRIPE_SECRET);
 
+const fetch = async (req, res) => {
+  try {
+    const cards = await Card.find({ user: req.params.id });
+    return res.json({
+      success: true,
+      message: "Cards fetched!",
+      data: {
+        cards
+      }
+    });
+  } catch (err) {
+    return res.json({
+      success: false,
+      message: err.message,
+      data: null
+    });
+  }
+};
+
 const save = async (req, res) => {
   try {
     const { payment_method, id } = req.body;
@@ -103,6 +122,7 @@ const remove = async (req, res) => {
 };
 
 module.exports = {
+  fetch,
   save,
   _default,
   remove
