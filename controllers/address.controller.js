@@ -1,7 +1,7 @@
 const Address = require("../models/address.model");
 const User = require("../models/user.model");
 
-const save = async () => {
+const save = async (req, res) => {
   try {
     const { address, id } = req.body;
     const addr = new Address(address);
