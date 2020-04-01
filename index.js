@@ -9,6 +9,7 @@ const app = express();
 // Local imports
 const UserRouter = require("./routes/user.router");
 const AddressRouter = require("./routes/address.router");
+const CardRouter = require("./routes/card.router");
 
 // DB Connection
 mongoose
@@ -28,6 +29,7 @@ app.use(express.json());
 // Routes
 app.use("/api/users", UserRouter);
 app.use("/api/addresses", AddressRouter);
+app.use("/api/cards", CardRouter);
 
 const PORT = process.env.PORT || 4000;
 

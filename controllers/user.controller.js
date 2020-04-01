@@ -157,27 +157,6 @@ const paymentIntent = async (req, res) => {
   }
 };
 
-const saveCard = async (req, res) => {
-  try {
-    const user = await User.findOne({ _id: req.body.id });
-    const pm = await stripe.paymentMethods.retrieve(req.body.payment_method);
-    console.log(pm);
-    user.cards = [...user.cards, pm];
-    await user.save();
-    return res.json({
-      success: true,
-      message: "Card saved",
-      data: null
-    });
-  } catch (err) {
-    return res.json({
-      success: false,
-      message: err.message,
-      data: null
-    });
-  }
-};
-
 const chargeUser = async (req, res) => {
   try {
     const user = await User.findOne({ _id: "5e80b0af1972a41cacd4b762" });
@@ -200,15 +179,7 @@ const chargeUser = async (req, res) => {
 module.exports = {
   login,
   signup,
-  saveCard,
   paymentIntent,
   refreshToken,
   chargeUser
 };
-
-// (async () => {
-//   const pm = await stripe.paymentMethods.retrieve(
-//     "pm_1GS2AeGKMRh0bTaiZyW8JtFa"
-//   );
-//   console.log(pm);
-// })();
