@@ -30,7 +30,8 @@ const UserSchema = new mongoose.Schema(
     },
     cards: [
       {
-        type: String
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Card"
       }
     ],
     addresses: [

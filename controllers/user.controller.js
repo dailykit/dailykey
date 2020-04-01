@@ -89,7 +89,7 @@ const signup = async (req, res) => {
       data: {
         username: email,
         enabled: true,
-        // emailVerified: true,
+        emailVerified: true,
         firstName: firstname,
         lastName: lastname,
         email: email,
@@ -99,7 +99,7 @@ const signup = async (req, res) => {
             value: password
           }
         ],
-        requiredActions: ["VERIFY_EMAIL"],
+        // requiredActions: ["VERIFY_EMAIL"],
         notBefore: 0,
         attributes: {
           phone: [phone]
@@ -135,31 +135,6 @@ const signup = async (req, res) => {
   }
 };
 
-const saveAddress = async (req, res) => {
-  try {
-    const { address, id } = req.body;
-    const addr = new Address(address);
-    const user = await User.findOne({ _id: id });
-    if (!user.addresses.length) {
-      addr.isDefault = true;
-    }
-    await addr.save();
-    user.addresses = [...user.addresses, addr._id];
-    await user.save();
-    return res.json({
-      success: true,
-      message: "Address saved",
-      data: null
-    });
-  } catch (err) {
-    return res.json({
-      success: false,
-      message: err.message,
-      data: null
-    });
-  }
-};
-
 const paymentIntent = async (req, res) => {
   try {
     const user = await User.findOne({ _id: req.body.id });
@@ -185,11 +160,9 @@ const paymentIntent = async (req, res) => {
 const saveCard = async (req, res) => {
   try {
     const user = await User.findOne({ _id: req.body.id });
-    // This will change later
-    // We'll make API req to stripe for fetching some card details like 4 digits, exp date. etc.
-    // It is not allowing that not test accounts maybe
-    console.log(req.body.payment_method);
-    user.cards = [...user.cards, req.body.payment_method];
+    const pm = await stripe.paymentMethods.retrieve(req.body.payment_method);
+    console.log(pm);
+    user.cards = [...user.cards, pm];
     await user.save();
     return res.json({
       success: true,
@@ -228,8 +201,14 @@ module.exports = {
   login,
   signup,
   saveCard,
-  saveAddress,
   paymentIntent,
   refreshToken,
   chargeUser
 };
+
+// (async () => {
+//   const pm = await stripe.paymentMethods.retrieve(
+//     "pm_1GS2AeGKMRh0bTaiZyW8JtFa"
+//   );
+//   console.log(pm);
+// })();

@@ -2,9 +2,13 @@ const mongoose = require("mongoose");
 
 const AddressSchema = new mongoose.Schema(
   {
-    isDefault: {
+    is_default: {
       type: Boolean,
       default: false
+    },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User"
     },
     line1: {
       type: String,
