@@ -10,23 +10,22 @@ const UserSchema = new mongoose.Schema(
       type: String
     },
     phone: {
-      type: String,
-      required: ["Phone number is required"]
+      type: String
     },
     email: {
       type: String,
       required: ["Email is required"]
     },
     password: {
-      type: String,
-      required: ["Password is required"]
+      type: String
     },
     keycloak_id: {
       type: String,
       required: ["Keycloak ID is required"]
     },
     stripe_id: {
-      type: String
+      type: String,
+      required: ["Stripe ID is required"]
     },
     cards: [
       {

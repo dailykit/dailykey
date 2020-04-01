@@ -63,69 +63,49 @@ const refreshToken = async (req, res) => {
 
 const signup = async (req, res) => {
   try {
-    // remove passwor later
-    const { email, password, firstname, lastname, phone } = req.body;
-    let url = `http://${process.env.KEYCLOAK_IP}/auth/realms/consumers/protocol/openid-connect/token`;
-    const keycloak_response = await axios({
-      url,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      auth: {
-        username: process.env.KEYCLOAK_USER,
-        password: process.env.KEYCLOAK_PSWD
-      },
-      data: "grant_type=client_credentials"
+    const { email, keycloak_id, firstname, lastname } = req.body;
+    const doc = await User.findOne({ email });
+    if (doc) {
+      throw Error("That email is already in use!");
+    }
+    const user = new User({
+      email,
+      firstname,
+      lastname,
+      keycloak_id
     });
-    url = `http://${process.env.KEYCLOAK_IP}/auth/admin/realms/consumers/users`;
-    const response = await axios({
-      url,
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: "Bearer " + keycloak_response.data.access_token
-      },
+    const customer = await stripe.customers.create({ email });
+    user.stripe_id = customer.id;
+    await user.save();
+    return res.json({
+      success: true,
+      message: "Account created",
+      data: null
+    });
+  } catch (err) {
+    return res.json({
+      success: false,
+      message: err.message,
+      data: null
+    });
+  }
+};
+
+const fetch = async (req, res) => {
+  try {
+    const user = await User.findOne({ keycloak_id: req.params.id })
+      .populate("addresses")
+      .populate("cards");
+    if (!user) {
+      throw Error("No such user exists!");
+    }
+    return res.json({
+      success: true,
+      message: "User found!",
       data: {
-        username: email,
-        enabled: true,
-        emailVerified: true,
-        firstName: firstname,
-        lastName: lastname,
-        email: email,
-        credentials: [
-          {
-            type: "password",
-            value: password
-          }
-        ],
-        // requiredActions: ["VERIFY_EMAIL"],
-        notBefore: 0,
-        attributes: {
-          phone: [phone]
-        }
+        user
       }
     });
-    if (response.status == 409) {
-      throw Error(response.data.errorMessage);
-    } else {
-      const user = new User({
-        email,
-        password,
-        firstname,
-        lastname,
-        phone,
-        keycloak_id: "NOT_PROVIDED"
-      });
-      const customer = await stripe.customers.create({ email });
-      user.stripe_id = customer.id;
-      await user.save();
-      return res.json({
-        success: true,
-        message: "Account created",
-        data: null
-      });
-    }
   } catch (err) {
     return res.json({
       success: false,
@@ -178,6 +158,7 @@ const chargeUser = async (req, res) => {
 
 module.exports = {
   login,
+  fetch,
   signup,
   paymentIntent,
   refreshToken,
