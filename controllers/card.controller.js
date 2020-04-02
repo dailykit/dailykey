@@ -95,13 +95,13 @@ const _default = async (req, res) => {
 
 const remove = async (req, res) => {
   try {
-    const { card, id } = req.body;
-    const doc = await Card.findOneAndRemove({ _id: card._id });
+    const { cardId, userId } = req.body;
+    const doc = await Card.findOneAndRemove({ _id: cardId });
     await User.findOneAndUpdate(
-      { _id: id },
+      { _id: userId },
       {
         $pull: {
-          cards: card._id
+          cards: cardId
         }
       }
     );

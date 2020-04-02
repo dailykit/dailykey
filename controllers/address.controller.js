@@ -50,7 +50,7 @@ const update = async (req, res) => {
   try {
     const { address } = req.body;
     const addr = await Address.findOneAndUpdate(
-      { _id: addr._id },
+      { _id: address._id },
       {
         $set: {
           line1: address.line1,
@@ -116,16 +116,16 @@ const _default = async (req, res) => {
 
 const remove = async (req, res) => {
   try {
-    const { address, id } = req.body;
+    const { addressId, userId } = req.body;
     await User.findOneAndUpdate(
-      { _id: id },
+      { _id: userId },
       {
         $pull: {
-          addresses: address._id
+          addresses: addressId
         }
       }
     );
-    const addr = await Address.findOneAndRemove({ _id: address._id });
+    const addr = await Address.findOneAndRemove({ _id: addressId });
     return res.json({
       success: true,
       message: "Address deleted!",
