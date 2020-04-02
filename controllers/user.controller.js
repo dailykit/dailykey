@@ -80,7 +80,9 @@ const signup = async (req, res) => {
     return res.json({
       success: true,
       message: "Account created",
-      data: null
+      data: {
+        user
+      }
     });
   } catch (err) {
     return res.json({

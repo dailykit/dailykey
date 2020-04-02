@@ -16,9 +16,6 @@ const UserSchema = new mongoose.Schema(
       type: String,
       required: ["Email is required"]
     },
-    password: {
-      type: String
-    },
     keycloak_id: {
       type: String,
       required: ["Keycloak ID is required"]
