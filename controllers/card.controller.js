@@ -62,14 +62,14 @@ const save = async (req, res) => {
 
 const _default = async (req, res) => {
   try {
-    const { id } = req.body;
-    const current = await Card.findOne({ user: id, is_default: true });
+    const { cardId, userId } = req.body;
+    const current = await Card.findOne({ user: userId, is_default: true });
     if (current) {
       current.is_default = false;
       await current.save();
     }
     const doc = await Card.findOneAndUpdate(
-      { _id: req.params.id },
+      { _id: cardId },
       {
         $set: {
           is_default: true
