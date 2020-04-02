@@ -83,14 +83,14 @@ const update = async (req, res) => {
 
 const _default = async (req, res) => {
   try {
-    const { address, id } = req.body;
-    const current = Address.findOne({ user: id, is_default: true });
+    const { id } = req.body;
+    const current = await Address.findOne({ user: id, is_default: true });
     if (current) {
       current.is_default = false;
       await current.save();
     }
     const addr = await Address.findOneAndUpdate(
-      { _id: address._id },
+      { _id: req.params.id },
       {
         $set: {
           is_default: true
