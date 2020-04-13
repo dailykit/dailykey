@@ -7,9 +7,7 @@ const fetch = async (req, res) => {
     return res.json({
       success: true,
       message: "Addresses fetched!",
-      data: {
-        addresses,
-      },
+      data: addresses,
     });
   } catch (err) {
     return res.json({
