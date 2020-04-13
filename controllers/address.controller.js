@@ -3,19 +3,19 @@ const User = require("../models/user.model");
 
 const fetch = async (req, res) => {
   try {
-    const addresses = await Address.find({ user: req.params.id });
+    const addresses = await Address.find(req.query);
     return res.json({
       success: true,
       message: "Addresses fetched!",
       data: {
-        addresses
-      }
+        addresses,
+      },
     });
   } catch (err) {
     return res.json({
       success: false,
       message: err.message,
-      data: null
+      data: null,
     });
   }
 };
@@ -35,13 +35,13 @@ const save = async (req, res) => {
     return res.json({
       success: true,
       message: "Address saved",
-      data: { address: addr }
+      data: { address: addr },
     });
   } catch (err) {
     return res.json({
       success: false,
       message: err.message,
-      data: null
+      data: null,
     });
   }
 };
@@ -58,25 +58,25 @@ const update = async (req, res) => {
           zip: address.zip,
           city: address.city,
           state: address.state,
-          instructions: address.instructions
-        }
+          instructions: address.instructions,
+        },
       },
       {
-        new: true
+        new: true,
       }
     );
     return res.json({
       success: true,
       message: "Address updated!",
       data: {
-        address: addr
-      }
+        address: addr,
+      },
     });
   } catch (err) {
     return res.json({
       success: false,
       message: err.message,
-      data: null
+      data: null,
     });
   }
 };
@@ -93,8 +93,8 @@ const _default = async (req, res) => {
       { _id: addressId },
       {
         $set: {
-          is_default: true
-        }
+          is_default: true,
+        },
       },
       { new: true }
     );
@@ -102,14 +102,14 @@ const _default = async (req, res) => {
       success: true,
       message: "Default address changed!",
       data: {
-        address: addr
-      }
+        address: addr,
+      },
     });
   } catch (err) {
     return res.json({
       success: false,
       message: err.message,
-      data: null
+      data: null,
     });
   }
 };
@@ -121,8 +121,8 @@ const remove = async (req, res) => {
       { _id: userId },
       {
         $pull: {
-          addresses: addressId
-        }
+          addresses: addressId,
+        },
       }
     );
     const addr = await Address.findOneAndRemove({ _id: addressId });
@@ -130,14 +130,14 @@ const remove = async (req, res) => {
       success: true,
       message: "Address deleted!",
       data: {
-        address: addr
-      }
+        address: addr,
+      },
     });
   } catch (err) {
     return res.json({
       success: false,
       message: err.message,
-      data: null
+      data: null,
     });
   }
 };
@@ -147,5 +147,5 @@ module.exports = {
   save,
   update,
   _default,
-  remove
+  remove,
 };
