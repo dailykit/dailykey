@@ -1,7 +1,7 @@
 const router = require("express").Router();
 const controller = require("../controllers/address.controller");
 
-router.route("/:id").get(controller.fetch);
+router.route("/").get(controller.fetch);
 router.route("/").post(controller.save);
 router.route("/update").post(controller.update);
 router.route("/default").post(controller._default);
