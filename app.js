@@ -22,15 +22,15 @@ app.use(express.urlencoded({ extended: false }))
 app.get('/api/', (req, res) => {
    res.json({ message: 'DailyKey Api' })
 })
-app.use('/api/payments/card', CardRouter)
-app.use('/api/payments/refund', RefundRouter)
-app.use('/api/payments/customer', CustomerRouter)
-app.use('/api/payments/setup-intent', SetupIntentRouter)
-app.use('/api/payments/payment-intent', PaymentIntentRouter)
+app.use('/api/card', CardRouter)
+app.use('/api/refund', RefundRouter)
+app.use('/api/customer', CustomerRouter)
+app.use('/api/setup-intent', SetupIntentRouter)
+app.use('/api/payment-intent', PaymentIntentRouter)
 
-app.get('/api/payments/balance', getBalance)
-app.get('/api/payments/account-id', getAccountId)
-app.get('/api/payments/login-link', createLoginLink)
+app.get('/api/balance', getBalance)
+app.get('/api/account-id', getAccountId)
+app.get('/api/login-link', createLoginLink)
 
 app.listen(process.env.PORT, function () {
    console.log('Listening on port ' + process.env.PORT)
