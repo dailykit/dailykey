@@ -71,8 +71,8 @@ const FETCH_ORG_FROM_HOSTNAME = `
 `
 
 const CREATE_CUSTOMER_BY_CLIENT = `
-   mutation insert_platform_CustomerByClient_one($clientId: String!, $keycloakId: String!) {
-      insert_platform_CustomerByClient_one(object: {clientId: $clientId, keycloakId: $keycloakId}) {
+   mutation createCustomerByClient($clientId: String!, $keycloakId: String!) {
+      createCustomerByClient(object: {clientId: $clientId, keycloakId: $keycloakId}) {
          clientId
          keycloakId
       }
