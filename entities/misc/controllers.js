@@ -93,7 +93,7 @@ export const createCustomerByClient = async (req, res) => {
             publicIp: { _eq: req.hostname },
          }
       )
-      const clientId = await data.organizations.realm.dailyKeyClientId
+      const clientId = await data.organizations[0].realm.dailyKeyClientId
 
       // create customer by client
       await request(
@@ -122,7 +122,7 @@ export const authorizeRequest = async (req, res) => {
             publicIp: { _eq: req.hostname },
          }
       )
-      const clientId = await data.organizations.realm.dailyKeyClientId
+      const clientId = await data.organizations[0].realm.dailyKeyClientId
 
       return res.json({
          'X-Hasura-User-Id': clientId,
