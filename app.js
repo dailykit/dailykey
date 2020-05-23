@@ -10,7 +10,13 @@ import {
    PaymentIntentRouter,
 } from './entities'
 
-import { getAccountId, createLoginLink, getBalance } from './entities/misc'
+import {
+   getBalance,
+   getAccountId,
+   createLoginLink,
+   authorizeRequest,
+   createCustomerByClient,
+} from './entities/misc'
 
 const app = express()
 
@@ -31,6 +37,8 @@ app.use('/api/payment-intent', PaymentIntentRouter)
 app.get('/api/balance', getBalance)
 app.get('/api/account-id', getAccountId)
 app.get('/api/login-link', createLoginLink)
+app.post('/api/webhooks/authorize-request', authorizeRequest)
+app.post('/api/webhooks/customer-by-client', createCustomerByClient)
 
 app.listen(process.env.PORT, function () {
    console.log('Listening on port ' + process.env.PORT)
