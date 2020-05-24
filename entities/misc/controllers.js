@@ -112,14 +112,15 @@ export const createCustomerByClient = async (req, res) => {
 
 export const authorizeRequest = async (req, res) => {
    try {
+      console.log(req.body)
       // fetch client id
       const data = await request(
          process.env.DAILYCLOAK_URL,
          FETCH_ORG_FROM_HOSTNAME,
          {
-            instanceUrl: { _eq: req.hostname },
-            organizationUrl: { _eq: req.hostname },
-            publicIp: { _eq: req.hostname },
+            instanceUrl: { _eq: req.body.headers.Host },
+            organizationUrl: { _eq: req.body.headers.Host },
+            publicIp: { _eq: req.body.headers.Host },
          }
       )
       const clientId = await data.organizations[0].realm.dailyKeyClientId
