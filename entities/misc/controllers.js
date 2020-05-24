@@ -1,6 +1,6 @@
 import axios from 'axios'
 import stripe from '../../lib/stripe'
-import { request } from 'graphql-request'
+import { GraphQLClient, request } from 'graphql-request'
 import { isObjectValid } from '../../utils'
 
 export const getAccountId = async (req, res) => {
@@ -69,20 +69,21 @@ const CREATE_CUSTOMER_BY_CLIENT = `
       }
    } 
 `
+const client = new GraphQLClient(process.env.HASURA_KEYCLOAK_URL, {
+   headers: {
+      'x-hasura-admin-secret': `${process.env.ADMIN_SECRET}`,
+   },
+})
 
 export const createCustomerByClient = async (req, res) => {
    try {
-      const { clientId, keycloakId } = req.body.event.new
+      const { clientId, keycloakId } = req.body.event.data.new
 
       // create customer by client
-      await request(
-         process.env.HASURA_KEYCLOAK_URL,
-         CREATE_CUSTOMER_BY_CLIENT,
-         {
-            clientId,
-            keycloakId,
-         }
-      )
+      await client.request(CREATE_CUSTOMER_BY_CLIENT, {
+         clientId,
+         keycloakId,
+      })
       return res.json({ success: true, message: 'Successfully created!' })
    } catch (error) {
       return res.json({ success: false, error: error.message })
@@ -91,7 +92,6 @@ export const createCustomerByClient = async (req, res) => {
 
 export const authorizeRequest = async (req, res) => {
    try {
-      console.log(req.body)
       const organizationId = req.body.headers['Organization-Id']
 
       // fetch client id
