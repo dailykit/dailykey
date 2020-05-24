@@ -108,3 +108,30 @@ export const authorizeRequest = async (req, res) => {
       return res.status(404).json({ success: false, error: error.message })
    }
 }
+
+const CREATE_CUSTOMER = `
+   mutation platform_createCustomer($email: String!, $keycloakId: String!) {
+      platform_createCustomer(object: {email: $email, keycloakId: $keycloakId}) {
+         keycloakId
+      }
+   }
+`
+
+export const createCustomer = async (req, res) => {
+   try {
+      const { email, id, realm_id } = req.body.event.data.new
+      if (realm_id === 'consumers') {
+         const data = await request(
+            process.env.HASURA_KEYCLOAK_URL,
+            CREATE_CUSTOMER,
+            { email, keycloakId: id }
+         )
+         return res.status(200).json({ success: true, data })
+      }
+      return res
+         .status(403)
+         .json({ success: false, message: "Request can't be processed!" })
+   } catch (error) {
+      return res.status(404).json({ success: false, error: error.message })
+   }
+}

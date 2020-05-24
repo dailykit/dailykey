@@ -13,6 +13,7 @@ import {
 import {
    getBalance,
    getAccountId,
+   createCustomer,
    createLoginLink,
    authorizeRequest,
    createCustomerByClient,
@@ -37,6 +38,7 @@ app.use('/api/payment-intent', PaymentIntentRouter)
 app.get('/api/balance', getBalance)
 app.get('/api/account-id', getAccountId)
 app.get('/api/login-link', createLoginLink)
+app.post('/api/webhooks/customer', createCustomer)
 app.post('/api/webhooks/authorize-request', authorizeRequest)
 app.post('/api/webhooks/customer-by-client', createCustomerByClient)
 
