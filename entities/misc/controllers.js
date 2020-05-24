@@ -51,23 +51,14 @@ export const getBalance = async (req, res) => {
    }
 }
 
-const FETCH_ORG_FROM_HOSTNAME = `
-   query organizations($organizationUrl: String_comparison_exp, $publicIp: String_comparison_exp, $instanceUrl: String_comparison_exp) {
-      organizations(where: 
-            {
-               _or: 
-                  [
-                     {organizationUrl: $organizationUrl}, 
-                     {instances: {publicIp: $publicIp}}, 
-                     {instances: {instanceUrl: $instanceUrl}}
-                  ]
-               }
-            ) {
-         realm {
-            dailyKeyClientId
-         }
+const FETCH_ORG = `
+   query organization($id: Int!){
+      organization(id: $id) {
+      realm {
+         dailyKeyClientId
       }
-   }
+      }
+   } 
 `
 
 const CREATE_CUSTOMER_BY_CLIENT = `
@@ -81,19 +72,7 @@ const CREATE_CUSTOMER_BY_CLIENT = `
 
 export const createCustomerByClient = async (req, res) => {
    try {
-      const { keycloakId } = req.body.event.new
-
-      // fetch client id
-      const data = await request(
-         process.env.DAILYCLOAK_URL,
-         FETCH_ORG_FROM_HOSTNAME,
-         {
-            instanceUrl: { _eq: req.hostname },
-            organizationUrl: { _eq: req.hostname },
-            publicIp: { _eq: req.hostname },
-         }
-      )
-      const clientId = await data.organizations[0].realm.dailyKeyClientId
+      const { clientId, keycloakId } = req.body.event.new
 
       // create customer by client
       await request(
@@ -113,23 +92,19 @@ export const createCustomerByClient = async (req, res) => {
 export const authorizeRequest = async (req, res) => {
    try {
       console.log(req.body)
-      // fetch client id
-      const data = await request(
-         process.env.DAILYCLOAK_URL,
-         FETCH_ORG_FROM_HOSTNAME,
-         {
-            instanceUrl: { _eq: req.body.headers.Host },
-            organizationUrl: { _eq: req.body.headers.Host },
-            publicIp: { _eq: req.body.headers.Host },
-         }
-      )
-      const clientId = await data.organizations[0].realm.dailyKeyClientId
+      const organizationId = req.body.headers['Organization-Id']
 
-      return res.json({
+      // fetch client id
+      const data = await request(process.env.DAILYCLOAK_URL, FETCH_ORG, {
+         id: organizationId,
+      })
+      const clientId = await data.organization.realm.dailyKeyClientId
+
+      return res.status(200).json({
          'X-Hasura-User-Id': clientId,
          'X-Hasura-Role': 'limited',
       })
    } catch (error) {
-      return res.json({ success: false, error: error.message })
+      return res.status(404).json({ success: false, error: error.message })
    }
 }
