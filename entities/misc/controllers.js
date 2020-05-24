@@ -121,7 +121,7 @@ export const createCustomer = async (req, res) => {
    try {
       const { email, id, realm_id } = req.body.event.data.new
       if (realm_id === 'consumers') {
-         const data = await request(
+         const data = await client.request(
             process.env.HASURA_KEYCLOAK_URL,
             CREATE_CUSTOMER,
             { email, keycloakId: id }
