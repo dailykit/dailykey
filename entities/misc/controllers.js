@@ -62,8 +62,8 @@ const FETCH_ORG = `
 `
 
 const CREATE_CUSTOMER_BY_CLIENT = `
-   mutation createCustomerByClient($clientId: String!, $keycloakId: String!) {
-      createCustomerByClient(object: {clientId: $clientId, keycloakId: $keycloakId}) {
+   mutation platform_createCustomerByClient($clientId: String!, $keycloakId: String!) {
+      platform_createCustomerByClient(object: {clientId: $clientId, keycloakId: $keycloakId}) {
          clientId
          keycloakId
       }
