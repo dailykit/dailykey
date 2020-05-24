@@ -1,4 +1,3 @@
-import axios from 'axios'
 import stripe from '../../lib/stripe'
 import { GraphQLClient, request } from 'graphql-request'
 import { isObjectValid } from '../../utils'
@@ -121,10 +120,13 @@ export const createCustomer = async (req, res) => {
    try {
       const { email, id, realm_id } = req.body.event.data.new
       if (realm_id === 'consumers') {
+         const customer = await stripe.customers.create({ email })
          const data = await client.request(CREATE_CUSTOMER, {
             email,
             keycloakId: id,
+            stripeCustomerId: customer.id,
          })
+
          return res.status(200).json({ success: true, data })
       }
       return res
