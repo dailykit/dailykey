@@ -3,9 +3,9 @@ import { isObjectValid } from '../../utils'
 
 export const create = async (req, res) => {
    try {
-      const { payment_method } = req.body
+      const { customer, confirm } = req.body
       const response = await stripe.setupIntents.create({
-         payment_method,
+         customer,
       })
 
       if (isObjectValid(response)) {

@@ -1,5 +1,6 @@
-import stripe from '../../lib/stripe'
 import { GraphQLClient, request } from 'graphql-request'
+
+import stripe from '../../lib/stripe'
 import { isObjectValid } from '../../utils'
 
 export const getAccountId = async (req, res) => {
@@ -53,9 +54,9 @@ export const getBalance = async (req, res) => {
 const FETCH_ORG = `
    query organization($id: Int!){
       organization(id: $id) {
-      realm {
-         dailyKeyClientId
-      }
+         realm {
+            dailyKeyClientId
+         }
       }
    } 
 `
