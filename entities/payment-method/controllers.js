@@ -18,7 +18,11 @@ export const get = async (req, res) => {
 
 export const list = async (req, res) => {
    try {
-      const response = await stripe.paymentMethods.list(req.query)
+      const { customer } = req.query
+      const response = await stripe.paymentMethods.list({
+         customer,
+         type: 'card',
+      })
 
       if (isObjectValid(response)) {
          return res.json({ success: true, data: response })
