@@ -110,8 +110,8 @@ export const authorizeRequest = async (req, res) => {
 }
 
 const CREATE_CUSTOMER = `
-   mutation platform_createCustomer($email: String!, $keycloakId: String!) {
-      platform_createCustomer(object: {email: $email, keycloakId: $keycloakId}) {
+   mutation platform_createCustomer($email: String!, $keycloakId: String!, $stripeCustomerId: String!) {
+      platform_createCustomer(object: {email: $email, keycloakId: $keycloakId, stripeCustomerId: $stripeCustomerId}) {
          keycloakId
       }
    }
