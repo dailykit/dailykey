@@ -43,11 +43,14 @@ export const create = async (req, res) => {
             updateCustomerPaymentIntent
          )
 
-         const organizations = await client.request(FETCH_ORG_BY_STRIPE_ID, {
-            stripeAccountId: {
-               _eq: onBehalfOf,
-            },
-         })
+         const { organizations } = await client.request(
+            FETCH_ORG_BY_STRIPE_ID,
+            {
+               stripeAccountId: {
+                  _eq: onBehalfOf,
+               },
+            }
+         )
          console.log('create -> organizations', organizations)
 
          const updateCart = await request(
