@@ -32,12 +32,14 @@ export const create = async (req, res) => {
             stripePaymentIntentId: intent.id,
          })
 
-         const organization = await client.request(FETCH_ORG_BY_ID, {
-            id: onBehalfOf,
+         const organization = await client.request(FETCH_ORG_BY_STRIPE_ID, {
+            stripeCustomerId: {
+               _eq: onBehalfOf,
+            },
          })
 
          await request(
-            `http://${organization.organizationUrl}/datahub/v1/graphql`,
+            `http://${organizations[0].organizationUrl}/datahub/v1/graphql`,
             UPDATE_CART,
             {
                id: transferGroup,
@@ -128,9 +130,9 @@ const UPDATE_CUSTOMER_PAYMENT_INTENT = `
    }
 `
 
-const FETCH_ORG_BY_ID = `
-   query organization($id: Int!) {
-      organization(id: $id) {
+const FETCH_ORG_BY_STRIPE_ID = `
+   query organizations($stripeAccountId: String_comparison_exp!) {
+      organizations(where: {stripeAccountId: $stripeAccountId}) {
          organizationUrl
       }
    }
