@@ -44,7 +44,7 @@ export const create = async (req, res) => {
          )
 
          const organizations = await client.request(FETCH_ORG_BY_STRIPE_ID, {
-            stripeCustomerId: {
+            stripeAccountId: {
                _eq: onBehalfOf,
             },
          })
