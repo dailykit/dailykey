@@ -160,6 +160,10 @@ const FETCH_ORG_BY_STRIPE_ID = `
 
 const UPDATE_CART = `
    mutation updateCart($id: Int_comparison_exp!, $_set: crm_orderCart_set_input! ) {
-      updateCart(where: {id: $id}, _set: $_set;)
+      updateCart(where: {id: $id}, _set: $_set) {
+         returning {
+            id
+         }
+      }
    }
 `
