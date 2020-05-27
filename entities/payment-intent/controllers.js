@@ -57,12 +57,10 @@ export const create = async (req, res) => {
             `http://${organizations[0].organizationUrl}/datahub/v1/graphql`,
             UPDATE_CART,
             {
-               id: transferGroup,
-               _set: {
-                  paymentStatus: 'SUCCEEDED',
-                  transactionRemark: intent,
-                  transactionId: intent.id,
-               },
+               id: { _eq: transferGroup },
+               paymentStatus: 'SUCCEEDED',
+               transactionRemark: intent,
+               transactionId: intent.id,
             }
          )
          console.log('create -> updateCart', updateCart)
@@ -159,11 +157,13 @@ const FETCH_ORG_BY_STRIPE_ID = `
 `
 
 const UPDATE_CART = `
-   mutation updateCart($id: Int_comparison_exp!, $_set: crm_orderCart_set_input! ) {
-      updateCart(where: {id: $id}, _set: $_set) {
+   mutation updateCart($id: Int_comparison_exp!, $paymentStatus: String!, $transactionId: String!, $transactionRemark: jsonb!) {
+      updateCart(
+         where: {id: $id}, 
+         _set: {paymentStatus: $paymentStatus, transactionId: $transactionId, transactionRemark: $transactionRemark}) {
          returning {
             id
          }
       }
-   }
+   } 
 `
