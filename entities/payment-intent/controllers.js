@@ -25,20 +25,32 @@ export const create = async (req, res) => {
          payment_method: paymentMethod,
          transfer_group: transferGroup,
       })
+      console.log('create -> intent', intent)
 
       if (intent.id) {
-         await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
-            id: intent.id,
-            stripePaymentIntentId: intent.id,
-         })
+         const updateCustomerPaymentIntent = await client.request(
+            UPDATE_CUSTOMER_PAYMENT_INTENT,
+            {
+               id,
+               _set: {
+                  transactionRemark: intent,
+                  stripePaymentIntentId: intent.id,
+               },
+            }
+         )
+         console.log(
+            'create -> updateCustomerPaymentIntent',
+            updateCustomerPaymentIntent
+         )
 
          const organizations = await client.request(FETCH_ORG_BY_STRIPE_ID, {
             stripeCustomerId: {
                _eq: onBehalfOf,
             },
          })
+         console.log('create -> organizations', organizations)
 
-         await request(
+         const updateCart = await request(
             `http://${organizations[0].organizationUrl}/datahub/v1/graphql`,
             UPDATE_CART,
             {
@@ -50,6 +62,7 @@ export const create = async (req, res) => {
                },
             }
          )
+         console.log('create -> updateCart', updateCart)
 
          return res.status(200).json({
             success: true,
@@ -57,6 +70,7 @@ export const create = async (req, res) => {
          })
       }
    } catch (error) {
+      console.log('create -> error', error)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
@@ -123,8 +137,11 @@ export const list = async (req, res) => {
 }
 
 const UPDATE_CUSTOMER_PAYMENT_INTENT = `
-   mutation updateCustomerPaymentIntent($id: uuid!, $stripePaymentIntentId: String!) {
-      updateCustomerPaymentIntent(pk_columns: {id: $id}, _set: {stripePaymentIntentId: $stripePaymentIntentId}) {
+   mutation updateCustomerPaymentIntent($id: uuid!, $_set: stripe_customerPaymentIntent_set_input!) {
+      updateCustomerPaymentIntent(
+         pk_columns: {id: $id}, 
+         _set:  $_set
+      ) {
          id
       }
    }
