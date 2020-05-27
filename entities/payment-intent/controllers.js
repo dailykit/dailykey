@@ -1,4 +1,4 @@
-import { GraphQLClient } from 'graphql-request'
+import { GraphQLClient, request } from 'graphql-request'
 
 import stripe from '../../lib/stripe'
 import { isObjectValid } from '../../utils'
@@ -31,6 +31,23 @@ export const create = async (req, res) => {
             id,
             stripePaymentIntentId: intent.id,
          })
+
+         const organization = await client.request(FETCH_ORG_BY_ID, {
+            id: onBehalfOf,
+         })
+
+         await request(
+            `http://${organization.organizationUrl}/datahub/v1/graphql`,
+            UPDATE_CART,
+            {
+               id: transferGroup,
+               _set: {
+                  paymentStatus: 'SUCCEEDED',
+                  transactionRemark: intent,
+                  transactionId: intent.id,
+               },
+            }
+         )
 
          return res.status(200).json({
             success: true,
@@ -108,5 +125,19 @@ const UPDATE_CUSTOMER_PAYMENT_INTENT = `
       updateCustomerPaymentIntent(pk_columns: {id: $id}, _set: {stripePaymentIntentId: $stripePaymentIntentId}) {
          id
       }
+   }
+`
+
+const FETCH_ORG_BY_ID = `
+   query organization($id: Int!) {
+      organization(id: $id) {
+         organizationUrl
+      }
+   }
+`
+
+const UPDATE_CART = `
+   mutation updateCart($id: Int_comparison_exp!, $_set: crm_orderCart_set_input! ) {
+      updateCart(where: {id: $id}, _set: $_set;)
    }
 `
