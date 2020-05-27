@@ -28,11 +28,11 @@ export const create = async (req, res) => {
 
       if (intent.id) {
          await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
-            id,
+            id: intent.id,
             stripePaymentIntentId: intent.id,
          })
 
-         const organization = await client.request(FETCH_ORG_BY_STRIPE_ID, {
+         const organizations = await client.request(FETCH_ORG_BY_STRIPE_ID, {
             stripeCustomerId: {
                _eq: onBehalfOf,
             },
