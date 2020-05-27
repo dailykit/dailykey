@@ -25,7 +25,6 @@ export const create = async (req, res) => {
          payment_method: paymentMethod,
          transfer_group: transferGroup,
       })
-      console.log('create -> intent', intent)
 
       if (intent.id) {
          const updateCustomerPaymentIntent = await client.request(
@@ -38,10 +37,6 @@ export const create = async (req, res) => {
                },
             }
          )
-         console.log(
-            'create -> updateCustomerPaymentIntent',
-            updateCustomerPaymentIntent
-         )
 
          const { organizations } = await client.request(
             FETCH_ORG_BY_STRIPE_ID,
@@ -51,7 +46,6 @@ export const create = async (req, res) => {
                },
             }
          )
-         console.log('create -> organizations', organizations)
 
          const updateCart = await request(
             `http://${organizations[0].organizationUrl}/datahub/v1/graphql`,
@@ -63,7 +57,6 @@ export const create = async (req, res) => {
                transactionId: intent.id,
             }
          )
-         console.log('create -> updateCart', updateCart)
 
          return res.status(200).json({
             success: true,
@@ -71,7 +64,6 @@ export const create = async (req, res) => {
          })
       }
    } catch (error) {
-      console.log('create -> error', error)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
