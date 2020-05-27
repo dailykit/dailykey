@@ -120,6 +120,9 @@ const CREATE_CUSTOMER = `
 export const createCustomer = async (req, res) => {
    try {
       const { email, id, realm_id } = req.body.event.data.new
+      if (!email) {
+         throw Error('Email is missing!')
+      }
       if (realm_id === 'consumers') {
          const customer = await stripe.customers.create({ email })
          const data = await client.request(CREATE_CUSTOMER, {
@@ -130,9 +133,6 @@ export const createCustomer = async (req, res) => {
 
          return res.status(200).json({ success: true, data })
       }
-      return res
-         .status(403)
-         .json({ success: false, message: "Request can't be processed!" })
    } catch (error) {
       return res.status(404).json({ success: false, error: error.message })
    }
