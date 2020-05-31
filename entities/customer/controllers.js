@@ -14,7 +14,7 @@ export const create = async (req, res) => {
       const response = await stripe.customers.create(args)
 
       if (isObjectValid(response)) {
-         await axios.post('', {
+         await axios.post(process.env.HASURA_KEYCLOAK_URL, {
             query: UPDATE_CONSUMER,
             variables: {
                keycloackId: req.body.event.new.keycloackId,
