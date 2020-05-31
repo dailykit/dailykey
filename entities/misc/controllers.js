@@ -3,20 +3,45 @@ import { GraphQLClient, request } from 'graphql-request'
 import stripe from '../../lib/stripe'
 import { isObjectValid } from '../../utils'
 
+const dailycloak_client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
+   headers: {
+      'x-hasura-admin-secret': `${process.env.ADMIN_SECRET}`,
+   },
+})
+
+const UPDATE_ORG = `
+   mutation updateOrganization(
+      $id: Int!
+      $_set: organization_organization_set_input!
+   ) {
+      updateOrganization(pk_columns: { id: $id }, _set: $_set) {
+         id
+      }
+   }
+`
+
 export const getAccountId = async (req, res) => {
    try {
-      const { code } = req.query
-      const response = await stripe.oauth.token({
+      const { org_id, code } = req.query
+      const { stripe_user_id } = await stripe.oauth.token({
          code,
          grant_type: 'authorization_code',
       })
-      const connected_account_id = await response.stripe_user_id
+      console.log('getAccountId -> stripe_user_id', stripe_user_id)
+
+      await dailycloak_client.request(UPDATE_ORG, {
+         id: org_id,
+         _set: {
+            stripeAccountId: stripe_user_id,
+         },
+      })
 
       return res.json({
          success: true,
-         data: { stripeAccountId: connected_account_id },
+         data: { stripeAccountId: stripe_user_id },
       })
    } catch (error) {
+      console.log('getAccountId -> error', error)
       return res.json({ success: false, error: error.message })
    }
 }
