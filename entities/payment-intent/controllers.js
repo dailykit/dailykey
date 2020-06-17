@@ -47,8 +47,8 @@ export const create = async (req, res) => {
             }
          )
 
-         const updateCart = await request(
-            `http://${organizations[0].organizationUrl}/datahub/v1/graphql`,
+         await request(
+            `https://${organizations[0].organizationUrl}/datahub/v1/graphql`,
             UPDATE_CART,
             {
                id: { _eq: transferGroup },
