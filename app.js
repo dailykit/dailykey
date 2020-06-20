@@ -25,9 +25,13 @@ import {
 const app = express()
 
 app.use(cors())
-app.use(morgan('dev'))
 app.use(express.json())
 app.use(express.urlencoded({ extended: false }))
+app.use(
+   morgan(
+      '[:status :method :url] :remote-user [:date[clf]] - [:user-agent] - :response-time ms'
+   )
+)
 
 app.get('/api/', (req, res) => {
    res.json({ message: 'DailyKey Api' })
