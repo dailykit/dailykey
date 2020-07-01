@@ -120,7 +120,7 @@ export const authorizeRequest = async (req, res) => {
       const organizationId = req.body.headers['Organization-Id']
 
       // fetch client id
-      const data = await dailycloak_client(FETCH_ORG, {
+      const data = await dailycloak_client.request(FETCH_ORG, {
          id: organizationId,
       })
       const clientId = await data.organization.realm.dailyKeyClientId
