@@ -3,7 +3,11 @@ import { GraphQLClient, request } from 'graphql-request'
 import stripe from '../../lib/stripe'
 import { isObjectValid } from '../../utils'
 
-const client = new GraphQLClient(process.env.DAILYCLOAK_URL)
+const client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
+   headers: {
+      'x-hasura-admin-secret': process.env.DAILYCLOAK_ADMIN_SECRET,
+   },
+})
 
 export const create = async (req, res) => {
    try {
