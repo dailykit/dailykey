@@ -5,7 +5,7 @@ import { isObjectValid } from '../../utils'
 
 const dailycloak_client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
    headers: {
-      'x-hasura-admin-secret': `${process.env.ADMIN_SECRET}`,
+      'x-hasura-admin-secret': `${process.env.DAILYCLOAK_ADMIN_SECRET}`,
    },
 })
 
@@ -96,7 +96,7 @@ const CREATE_CUSTOMER_BY_CLIENT = `
 `
 const client = new GraphQLClient(process.env.HASURA_KEYCLOAK_URL, {
    headers: {
-      'x-hasura-admin-secret': `${process.env.ADMIN_SECRET}`,
+      'x-hasura-admin-secret': `${process.env.KEYCLOAK_ADMIN_SECRET}`,
    },
 })
 
@@ -120,7 +120,7 @@ export const authorizeRequest = async (req, res) => {
       const organizationId = req.body.headers['Organization-Id']
 
       // fetch client id
-      const data = await request(process.env.DAILYCLOAK_URL, FETCH_ORG, {
+      const data = await dailycloak_client(FETCH_ORG, {
          id: organizationId,
       })
       const clientId = await data.organization.realm.dailyKeyClientId
