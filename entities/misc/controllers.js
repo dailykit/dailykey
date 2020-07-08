@@ -77,7 +77,7 @@ export const getBalance = async (req, res) => {
 }
 
 const CREATE_CUSTOMER_BY_CLIENT = `
-   mutation platform_createCustomerByClient($organizationId: String!, $keycloakId: String!) {
+   mutation platform_createCustomerByClient($organizationId: Int!, $keycloakId: String!) {
       platform_createCustomerByClient(object: {organizationId: $organizationId, keycloakId: $keycloakId}) {
          keycloakId
          organizationId
@@ -97,7 +97,7 @@ export const createCustomerByClient = async (req, res) => {
       // create customer by client
       await client.request(CREATE_CUSTOMER_BY_CLIENT, {
          keycloakId,
-         organizationId: req.headers.organizationid,
+         organizationId: Number(req.headers.organizationid),
       })
       return res.json({ success: true, message: 'Successfully created!' })
    } catch (error) {
