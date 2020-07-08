@@ -110,8 +110,8 @@ export const authorizeRequest = async (req, res) => {
       const organizationId = req.body.headers['Organization-Id']
 
       return res.status(200).json({
-         'X-Hasura-User-Id': organizationId,
          'X-Hasura-Role': 'limited',
+         'X-Hasura-User-Id': Number(organizationId),
       })
    } catch (error) {
       return res.status(404).json({ success: false, error: error.message })
