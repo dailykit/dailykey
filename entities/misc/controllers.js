@@ -76,21 +76,11 @@ export const getBalance = async (req, res) => {
    }
 }
 
-const FETCH_ORG = `
-   query organization($id: Int!){
-      organization(id: $id) {
-         realm {
-            dailyKeyClientId
-         }
-      }
-   } 
-`
-
 const CREATE_CUSTOMER_BY_CLIENT = `
-   mutation platform_createCustomerByClient($clientId: String!, $keycloakId: String!) {
-      platform_createCustomerByClient(object: {clientId: $clientId, keycloakId: $keycloakId}) {
-         clientId
+   mutation platform_createCustomerByClient($organizationId: String!, $keycloakId: String!) {
+      platform_createCustomerByClient(object: {organizationId: $organizationId, keycloakId: $keycloakId}) {
          keycloakId
+         organizationId
       }
    } 
 `
@@ -102,12 +92,12 @@ const client = new GraphQLClient(process.env.HASURA_KEYCLOAK_URL, {
 
 export const createCustomerByClient = async (req, res) => {
    try {
-      const { clientId, keycloakId } = req.body.event.data.new
+      const { keycloakId } = req.body.event.data.new
 
       // create customer by client
       await client.request(CREATE_CUSTOMER_BY_CLIENT, {
-         clientId,
          keycloakId,
+         organizationId: req.headers.organizationid,
       })
       return res.json({ success: true, message: 'Successfully created!' })
    } catch (error) {
@@ -119,14 +109,8 @@ export const authorizeRequest = async (req, res) => {
    try {
       const organizationId = req.body.headers['Organization-Id']
 
-      // fetch client id
-      const data = await dailycloak_client.request(FETCH_ORG, {
-         id: organizationId,
-      })
-      const clientId = await data.organization.realm.dailyKeyClientId
-
       return res.status(200).json({
-         'X-Hasura-User-Id': clientId,
+         'X-Hasura-User-Id': organizationId,
          'X-Hasura-Role': 'limited',
       })
    } catch (error) {
