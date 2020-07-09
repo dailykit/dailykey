@@ -77,8 +77,9 @@ export const getBalance = async (req, res) => {
 }
 
 const CREATE_CUSTOMER_BY_CLIENT = `
-   mutation platform_createCustomerByClient($organizationId: Int!, $keycloakId: String!) {
-      platform_createCustomerByClient(object: {organizationId: $organizationId, keycloakId: $keycloakId}) {
+   mutation platform_createCustomerByClient($clientId: String!, $organizationId: Int!, $keycloakId: String!) {
+      platform_createCustomerByClient(object: {clientId: $clientId, organizationId: $organizationId, keycloakId: $keycloakId}) {
+         clientId
          keycloakId
          organizationId
       }
@@ -92,10 +93,11 @@ const client = new GraphQLClient(process.env.HASURA_KEYCLOAK_URL, {
 
 export const createCustomerByClient = async (req, res) => {
    try {
-      const { keycloakId } = req.body.event.data.new
+      const { clientId, keycloakId } = req.body.event.data.new
 
       // create customer by client
       await client.request(CREATE_CUSTOMER_BY_CLIENT, {
+         clientId,
          keycloakId,
          organizationId: Number(req.headers.organizationid),
       })
