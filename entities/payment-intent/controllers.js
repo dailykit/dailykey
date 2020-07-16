@@ -1,7 +1,7 @@
 import { GraphQLClient, request } from 'graphql-request'
 
 import stripe from '../../lib/stripe'
-import { isObjectValid } from '../../utils'
+import { isObjectValid, logger } from '../../utils'
 
 const client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
    headers: {
@@ -68,6 +68,7 @@ export const create = async (req, res) => {
          })
       }
    } catch (error) {
+      logger('/api/payment-intent', error.message)
       return res.status(404).json({ success: false, error: error.message })
    }
 }

@@ -1,7 +1,7 @@
 import { GraphQLClient, request } from 'graphql-request'
 
 import stripe from '../../lib/stripe'
-import { isObjectValid } from '../../utils'
+import { isObjectValid, logger } from '../../utils'
 
 const dailycloak_client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
    headers: {
@@ -27,7 +27,6 @@ export const getAccountId = async (req, res) => {
          code,
          grant_type: 'authorization_code',
       })
-      console.log('getAccountId -> stripe_user_id', stripe_user_id)
 
       await dailycloak_client.request(UPDATE_ORG, {
          id: org_id,
@@ -41,7 +40,7 @@ export const getAccountId = async (req, res) => {
          data: { stripeAccountId: stripe_user_id },
       })
    } catch (error) {
-      console.log('getAccountId -> error', error)
+      logger('/api/account-id', error.message)
       return res.json({ success: false, error: error.message })
    }
 }
@@ -55,6 +54,7 @@ export const createLoginLink = async (req, res) => {
          data: { link: response },
       })
    } catch (error) {
+      logger('/api/login-link', error.message)
       return res.json({ success: false, error: error.message })
    }
 }
@@ -103,6 +103,7 @@ export const createCustomerByClient = async (req, res) => {
       })
       return res.json({ success: true, message: 'Successfully created!' })
    } catch (error) {
+      logger('/api/webhooks/customer-by-client', error.message)
       return res.json({ success: false, error: error.message })
    }
 }
@@ -116,6 +117,7 @@ export const authorizeRequest = async (req, res) => {
          'X-Hasura-User-Id': organizationId,
       })
    } catch (error) {
+      logger('/api/webhooks/authorize-request', error.message)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
@@ -145,6 +147,7 @@ export const createCustomer = async (req, res) => {
          return res.status(200).json({ success: true, data })
       }
    } catch (error) {
+      logger('/api/webhooks/customer', error.message)
       return res.status(404).json({ success: false, error: error.message })
    }
 }

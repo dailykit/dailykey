@@ -1,5 +1,5 @@
 import stripe from '../../lib/stripe'
-import { isObjectValid } from '../../utils'
+import { isObjectValid, logger } from '../../utils'
 
 export const create = async (req, res) => {
    try {
@@ -14,6 +14,7 @@ export const create = async (req, res) => {
          throw Error('Didnt get any response from Stripe!')
       }
    } catch (error) {
+      logger('/api/setup-intent', error.message)
       return res.json({ success: false, error: error.message })
    }
 }

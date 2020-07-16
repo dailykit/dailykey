@@ -1,5 +1,7 @@
 import { GraphQLClient } from 'graphql-request'
 
+import { logger } from '../../utils'
+
 const client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
    headers: {
       'x-hasura-admin-secret': process.env.DAILYCLOAK_ADMIN_SECRET,
@@ -59,6 +61,7 @@ export const createCustomerPaymentIntent = async (req, res) => {
          })
       }
    } catch (error) {
+      logger('/api/initiate-payment', error.message)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
