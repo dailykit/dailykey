@@ -27,6 +27,12 @@ export const create = async (req, res) => {
          stripeCustomerId,
       } = req.body.event.data.new
 
+      const { organizations } = await client.request(FETCH_ORG_BY_STRIPE_ID, {
+         stripeAccountId: {
+            _eq: onBehalfOf,
+         },
+      })
+
       const intent = await stripe.paymentIntents.create({
          amount,
          confirm: true,
@@ -35,6 +41,7 @@ export const create = async (req, res) => {
          customer: stripeCustomerId,
          payment_method: paymentMethod,
          transfer_group: transferGroup,
+         return_url: `https://${organizations[0].organizationUrl}/store/paymentProcessing`,
       })
 
       if (intent.id) {
@@ -46,15 +53,6 @@ export const create = async (req, res) => {
                stripePaymentIntentId: intent.id,
             },
          })
-
-         const { organizations } = await client.request(
-            FETCH_ORG_BY_STRIPE_ID,
-            {
-               stripeAccountId: {
-                  _eq: onBehalfOf,
-               },
-            }
-         )
 
          await request(
             `https://${organizations[0].organizationUrl}/datahub/v1/graphql`,
