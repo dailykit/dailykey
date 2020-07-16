@@ -9,6 +9,13 @@ const client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
    },
 })
 
+const STATUS = {
+   requires_action: 'REQUIRES_ACTION',
+   processing: 'PROCESSING',
+   canceled: 'CANCELLED',
+   succeeded: 'SUCCEEDED',
+}
+
 export const create = async (req, res) => {
    try {
       const {
@@ -31,16 +38,14 @@ export const create = async (req, res) => {
       })
 
       if (intent.id) {
-         const updateCustomerPaymentIntent = await client.request(
-            UPDATE_CUSTOMER_PAYMENT_INTENT,
-            {
-               id,
-               _set: {
-                  transactionRemark: intent,
-                  stripePaymentIntentId: intent.id,
-               },
-            }
-         )
+         await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
+            id,
+            _set: {
+               transactionRemark: intent,
+               status: STATUS[intent.status],
+               stripePaymentIntentId: intent.id,
+            },
+         })
 
          const { organizations } = await client.request(
             FETCH_ORG_BY_STRIPE_ID,
@@ -55,10 +60,10 @@ export const create = async (req, res) => {
             `https://${organizations[0].organizationUrl}/datahub/v1/graphql`,
             UPDATE_CART,
             {
-               id: { _eq: transferGroup },
-               paymentStatus: 'SUCCEEDED',
-               transactionRemark: intent,
                transactionId: intent.id,
+               transactionRemark: intent,
+               id: { _eq: transferGroup },
+               paymentStatus: STATUS[intent.status],
             }
          )
 
