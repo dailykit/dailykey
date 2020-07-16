@@ -55,6 +55,10 @@ export const createCustomerPaymentIntent = async (req, res) => {
             message: 'Payment request has been initiated!',
          })
       } else {
+         logger(
+            '/api/initiate-payment',
+            "Your account doesn't have stripe linked!"
+         )
          return res.status(403).json({
             success: false,
             error: "Your account doesn't have stripe linked!",
