@@ -122,23 +122,34 @@ export const authorizeRequest = async (req, res) => {
    }
 }
 
-const CREATE_CUSTOMER = `
+const UPSERT_CUSTOMER = `
    mutation platform_createCustomer($email: String!, $keycloakId: String!, $stripeCustomerId: String!) {
-      platform_createCustomer(object: {email: $email, keycloakId: $keycloakId, stripeCustomerId: $stripeCustomerId}) {
+      platform_createCustomer(
+         object: { email: $email, keycloakId: $keycloakId, stripeCustomerId: $stripeCustomerId }, 
+         on_conflict: {
+            constraint: customer_keycloakId_key, update_columns: [email, stripeCustomerId]
+         }
+      ) {
          keycloakId
       }
    }
+ 
 `
 
 export const createCustomer = async (req, res) => {
    try {
       const { email, id, realm_id } = req.body.event.data.new
-      if (!email) {
-         throw Error('Email is missing!')
-      }
+
       if (realm_id === 'consumers') {
+         if (!email) {
+            let data = await client.request(UPSERT_CUSTOMER, {
+               keycloakId: id,
+            })
+            return res.status(200).json({ success: true, data })
+         }
+
          const customer = await stripe.customers.create({ email })
-         const data = await client.request(CREATE_CUSTOMER, {
+         const data = await client.request(UPSERT_CUSTOMER, {
             email,
             keycloakId: id,
             stripeCustomerId: customer.id,
@@ -146,6 +157,9 @@ export const createCustomer = async (req, res) => {
 
          return res.status(200).json({ success: true, data })
       }
+      return res
+         .status(403)
+         .json({ success: false, message: 'Must be consumers realm!' })
    } catch (error) {
       logger('/api/webhooks/customer', error.message)
       return res.status(404).json({ success: false, error: error.message })
