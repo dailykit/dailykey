@@ -101,10 +101,12 @@ export const createCustomerByClient = async (req, res) => {
          keycloakId,
          organizationId: Number(req.headers.organizationid),
       })
-      return res.json({ success: true, message: 'Successfully created!' })
+      return res
+         .status(200)
+         .json({ success: true, message: 'Successfully created!' })
    } catch (error) {
       logger('/api/webhooks/customer-by-client', error.message)
-      return res.json({ success: false, error: error.message })
+      return res.status(400).json({ success: false, error: error.message })
    }
 }
 
