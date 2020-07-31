@@ -123,7 +123,7 @@ export const authorizeRequest = async (req, res) => {
 }
 
 const UPSERT_CUSTOMER = `
-   mutation platform_createCustomer($email: String, $keycloakId: String!, $stripeCustomerId: String!) {
+   mutation platform_createCustomer($email: String, $keycloakId: String!, $stripeCustomerId: String) {
       platform_createCustomer(
          object: { email: $email, keycloakId: $keycloakId, stripeCustomerId: $stripeCustomerId }, 
          on_conflict: {
