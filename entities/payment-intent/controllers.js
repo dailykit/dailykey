@@ -33,42 +33,52 @@ export const create = async (req, res) => {
          },
       })
 
-      const intent = await stripe.paymentIntents.create({
-         amount,
-         confirm: true,
-         currency: 'usd',
-         on_behalf_of: onBehalfOf,
-         customer: stripeCustomerId,
-         payment_method: paymentMethod,
-         transfer_group: transferGroup,
-         return_url: `https://${organizations[0].organizationUrl}/store/paymentProcessing`,
-      })
-
-      if (intent.id) {
-         await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
-            id,
-            _set: {
-               transactionRemark: intent,
-               status: STATUS[intent.status],
-               stripePaymentIntentId: intent.id,
-            },
+      if (organizations.length > 0) {
+         const [organization] = organizations
+         const intent = await stripe.paymentIntents.create({
+            amount,
+            confirm: true,
+            currency: 'usd',
+            on_behalf_of: onBehalfOf,
+            customer: stripeCustomerId,
+            payment_method: paymentMethod,
+            transfer_group: transferGroup,
+            return_url: `https://${organization.organizationUrl}/store/paymentProcessing`,
          })
 
-         await request(
-            `https://${organizations[0].organizationUrl}/datahub/v1/graphql`,
-            UPDATE_CART,
-            {
+         if (intent.id) {
+            await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
+               id,
+               _set: {
+                  transactionRemark: intent,
+                  status: STATUS[intent.status],
+                  stripePaymentIntentId: intent.id,
+               },
+            })
+
+            const datahubClient = new GraphQLClient(
+               `https://${organization.organizationUrl}/datahub/v1/graphql`,
+               {
+                  headers: {
+                     'x-hasura-admin-secret': organization.adminSecret,
+                  },
+               }
+            )
+
+            await datahubClient.request(UPDATE_CART, {
                transactionId: intent.id,
                transactionRemark: intent,
                id: { _eq: transferGroup },
                paymentStatus: STATUS[intent.status],
-            }
-         )
+            })
 
-         return res.status(200).json({
-            success: true,
-            data: { intent },
-         })
+            return res.status(200).json({
+               success: true,
+               data: { intent },
+            })
+         }
+      } else {
+         throw Error('No linked organization!')
       }
    } catch (error) {
       logger('/api/payment-intent', error.message)
@@ -150,7 +160,8 @@ const UPDATE_CUSTOMER_PAYMENT_INTENT = `
 
 const FETCH_ORG_BY_STRIPE_ID = `
    query organizations($stripeAccountId: String_comparison_exp!) {
-      organizations(where: {stripeAccountId: $stripeAccountId}) {
+      organizations(where: { stripeAccountId: $stripeAccountId }) {
+         adminSecret
          organizationUrl
       }
    }
