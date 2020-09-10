@@ -22,8 +22,8 @@ import {
    authorizeRequest,
    createCustomerByClient,
    createCustomerPaymentIntent,
+   updateDailyosStripeStatus,
 } from './entities/misc'
-import { logger } from './utils'
 
 const app = express()
 
@@ -62,6 +62,7 @@ app.post('/api/initiate-payment', createCustomerPaymentIntent)
 app.post('/api/webhooks/customer', createCustomer)
 app.post('/api/webhooks/authorize-request', authorizeRequest)
 app.post('/api/webhooks/customer-by-client', createCustomerByClient)
+app.post('/api/webhooks/dailyos-stripe-status', updateDailyosStripeStatus)
 
 app.listen(process.env.PORT, function () {
    console.log('Listening on port ' + process.env.PORT)
