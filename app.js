@@ -23,6 +23,7 @@ import {
    createCustomerByClient,
    createCustomerPaymentIntent,
    updateDailyosStripeStatus,
+   getAccountDetails,
 } from './entities/misc'
 
 const app = express()
@@ -57,6 +58,7 @@ app.use('/api/payment-intent', PaymentIntentRouter)
 app.get('/api/balance', getBalance)
 app.get('/api/account-id', getAccountId)
 app.get('/api/login-link', createLoginLink)
+app.get('/api/account-details/:id', getAccountDetails)
 app.post('/api/initiate-payment', createCustomerPaymentIntent)
 
 app.post('/api/webhooks/customer', createCustomer)
