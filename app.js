@@ -12,6 +12,7 @@ import {
    SetupIntentRouter,
    PaymentMethodRouter,
    PaymentIntentRouter,
+   PaymentRouter,
 } from './entities'
 
 import {
@@ -54,6 +55,7 @@ app.use('/api/customer', CustomerRouter)
 app.use('/api/setup-intent', SetupIntentRouter)
 app.use('/api/payment-method', PaymentMethodRouter)
 app.use('/api/payment-intent', PaymentIntentRouter)
+app.use('/api/payment', PaymentRouter)
 
 app.get('/api/balance', getBalance)
 app.get('/api/account-id', getAccountId)
