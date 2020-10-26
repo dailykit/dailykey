@@ -25,8 +25,8 @@ export const request = async ({ data = {}, keys = {} }) => {
          amount: amount * 100,
       }
 
-      if (!keys.id) throw Error('Missing razorpay key id!')
-      if (!keys.secret) throw Error('Missing razorpay key secret!')
+      if (!keys.publishable.id) throw Error('Missing razorpay key id!')
+      if (!keys.secret.id) throw Error('Missing razorpay key secret!')
 
       const rzp = new Razorpay({
          key_id: keys.publishable.id,

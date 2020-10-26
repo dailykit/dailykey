@@ -2,10 +2,11 @@ export const PAYMENT_PARTNERSHIP = `
    query partnership($id: Int!) {
       partnership: paymentHub_paymentPartnership_by_pk(id: $id) {
          id
-         config
          isActive
          pricing
          currency
+         publishableConfig
+         secretConfig
          isPayoutRequired
          organization {
             datahubUrl
