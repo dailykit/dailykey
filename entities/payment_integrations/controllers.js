@@ -92,8 +92,17 @@ export const processRequest = async (req, res) => {
       if (!company)
          throw Error('No payment provider linked with this partnership!')
 
-      if (!partnership.config) {
-         throw Error('Keys are required!')
+      if (!partnership.publishableConfig) {
+         throw Error('Publishable keys are required!')
+      }
+      if (Object.keys(partnership.publishableConfig).length === 0) {
+         throw Error('Publishable keys are required!')
+      }
+      if (!partnership.secretConfig) {
+         throw Error('Secret keys are required!')
+      }
+      if (Object.keys(partnership.secretConfig).length === 0) {
+         throw Error('Secret keys are required!')
       }
 
       const { identifier } = company
@@ -104,7 +113,10 @@ export const processRequest = async (req, res) => {
       let request = {}
 
       request = await providers[identifier].request({
-         keys: partnership.config,
+         keys: {
+            publishable: partnership.publishableConfig,
+            secret: partnership.secretConfig,
+         },
          data: { ...req.body.event.data.new, currency: partnership.currency },
       })
 

@@ -29,8 +29,8 @@ export const request = async ({ data = {}, keys = {} }) => {
       if (!keys.secret) throw Error('Missing razorpay key secret!')
 
       const rzp = new Razorpay({
-         key_id: keys.id,
-         key_secret: keys.secret,
+         key_id: keys.publishable.id,
+         key_secret: keys.secret.id,
       })
 
       const order = await rzp.orders.create(options)
