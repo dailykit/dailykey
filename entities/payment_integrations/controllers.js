@@ -6,6 +6,7 @@ import {
    UPDATE_CART,
    PAYMENT_PARTNERSHIP,
    INSERT_PAYMENT_RECORD,
+   UPDATE_PAYMENT_RECORD,
 } from './graphql'
 import { logger } from '../../utils'
 import * as razorpay from './razorpay'
@@ -202,6 +203,22 @@ export const handleCart = async (req, res) => {
       return res.status(200).json({ success: true, message: 'Cart updated!' })
    } catch (error) {
       logger('/api/payment/cart', error.message)
+      return res.status(400).json({ success: false, error: error.message })
+   }
+}
+
+export const discard = async (req, res) => {
+   try {
+      const { paymentId = '' } = req.body
+
+      if (!paymentId) throw Error('Payment Id is required!')
+
+      await client.request(UPDATE_PAYMENT_RECORD, {
+         pk_columns: { id: paymentId },
+         _set: { paymentStatus: 'DISCARDED' },
+      })
+   } catch (error) {
+      logger('/api/payment/discard', error.message)
       return res.status(400).json({ success: false, error: error.message })
    }
 }
