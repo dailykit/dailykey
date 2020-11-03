@@ -1,8 +1,7 @@
-import moment from 'moment'
 import Razorpay from 'razorpay'
 import { GraphQLClient } from 'graphql-request'
 
-import { UPDATE_CART, UPDATE_PAYMENT_RECORD } from '../graphql'
+import { UPDATE_PAYMENT_RECORD } from '../graphql'
 
 const client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
    headers: {
@@ -39,6 +38,7 @@ export const request = async ({ data = {}, keys = {} }) => {
          pk_columns: { id },
          _set: {
             paymentRequestId: order.id,
+            paymentStatus: 'PROCESSING',
          },
       })
 
@@ -52,33 +52,21 @@ export const transaction = async ({ data, payment }) => {
    try {
       const { success = true } = data
 
-      await client.request(UPDATE_PAYMENT_RECORD, {
-         pk_columns: { id: payment.id },
-         _set: {
-            paymentStatus: success ? 'SUCCEEDED' : 'FAILED',
-            paymentTransactionInfo: data,
-            ...(success && {
-               paymentTransactionId: data.razorpay_payment_id,
-            }),
-         },
-      })
-
-      const { adminSecret, datahubUrl } = payment.partnership.organization
-      const datahubClient = new GraphQLClient(datahubUrl, {
-         headers: {
-            'x-hasura-admin-secret': adminSecret,
-         },
-      })
-
-      await datahubClient.request(UPDATE_CART, {
-         id: payment.orderCartId,
-         _set: {
-            paymentId: payment.id,
-            paymentUpdatedAt: moment().toISOString(),
-            paymentStatus: success ? 'SUCCEEDED' : 'FAILED',
-         },
-      })
+      const { updatePaymentTransaction } = await client.request(
+         UPDATE_PAYMENT_RECORD,
+         {
+            pk_columns: { id: payment.id },
+            _set: {
+               paymentStatus: success ? 'SUCCEEDED' : 'FAILED',
+               paymentTransactionInfo: data,
+               ...(success && {
+                  paymentTransactionId: data.razorpay_payment_id,
+               }),
+            },
+         }
+      )
+      return updatePaymentTransaction
    } catch (error) {
-      throw Error
+      throw error
    }
 }

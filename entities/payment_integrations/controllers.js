@@ -36,15 +36,15 @@ export const initiate = async (req, res) => {
 
       if (!partnership) throw Error('Partnership does not exist!')
 
-      const { insertPaymentRecord = null } = await client.request(
+      const { insertPaymentRecord } = await client.request(
          INSERT_PAYMENT_RECORD,
          {
             object: {
                amount,
                orderCartId: cartId,
+               paymentStatus: 'PENDING',
                paymentRequestInfo: req.body,
                customerKeycloakId: keycloakId,
-               paymentStatus: 'REQUEST_CREATED',
                paymentPartnershipId: partnership.id,
                ...(partnership.isPayoutRequired
                   ? { payouts: { data: {} } }
@@ -52,25 +52,6 @@ export const initiate = async (req, res) => {
             },
          }
       )
-
-      if (!insertPaymentRecord)
-         throw Error('Failed to initiate payment request!')
-
-      const { id } = insertPaymentRecord
-
-      const datahubClient = new GraphQLClient(
-         partnership.organization.datahubUrl,
-         {
-            headers: {
-               'x-hasura-admin-secret': partnership.organization.adminSecret,
-            },
-         }
-      )
-
-      await datahubClient.request(UPDATE_CART, {
-         id: cartId,
-         _set: { paymentId: id, paymentUpdatedAt: moment().toISOString() },
-      })
 
       return res.status(200).json({ success: true, data: insertPaymentRecord })
    } catch (error) {
@@ -120,23 +101,6 @@ export const processRequest = async (req, res) => {
          data: { ...req.body.event.data.new, currency: partnership.currency },
       })
 
-      const datahubClient = new GraphQLClient(
-         partnership.organization.datahubUrl,
-         {
-            headers: {
-               'x-hasura-admin-secret': partnership.organization.adminSecret,
-            },
-         }
-      )
-
-      await datahubClient.request(UPDATE_CART, {
-         id: orderCartId,
-         _set: {
-            paymentId: id,
-            paymentUpdatedAt: moment().toISOString(),
-         },
-      })
-
       return res.status(200).json({ success: true, data: request })
    } catch (error) {
       logger('/api/payment/request/process', error.message)
@@ -168,8 +132,76 @@ export const processTransaction = async (req, res) => {
          data: req.body,
          payment,
       })
+      return res.status(200).json({ success: true, data: { transaction } })
    } catch (error) {
       logger('/api/payment/transaction/process', error.message)
+      return res.status(400).json({ success: false, error: error.message })
+   }
+}
+
+export const handleCart = async (req, res) => {
+   try {
+      const {
+         id,
+         orderCartId,
+         paymentStatus,
+         paymentRequestInfo,
+         paymentPartnershipId,
+         paymentTransactionInfo,
+      } = req.body.event.data.new
+
+      const { partnership } = await client.request(PAYMENT_PARTNERSHIP, {
+         id: paymentPartnershipId,
+      })
+
+      if (!partnership)
+         throw Error('No payment provider linked with this partnership!')
+
+      if (!('organization' in partnership))
+         throw Error('No organization is linked with partnership!')
+      if (
+         !('datahubUrl' in partnership.organization || {}) &&
+         !partnership.organization.datahubUrl
+      )
+         throw Error('Missing datahub url!')
+      if (
+         !('adminSecret' in partnership.organization || {}) &&
+         !partnership.organization.adminSecret
+      )
+         throw Error('Missing admin secret!')
+
+      const datahubClient = new GraphQLClient(
+         partnership.organization.datahubUrl,
+         {
+            headers: {
+               'x-hasura-admin-secret': partnership.organization.adminSecret,
+            },
+         }
+      )
+
+      await datahubClient.request(UPDATE_CART, {
+         id: orderCartId,
+         _set: {
+            ...(paymentStatus === 'DISCARDED'
+               ? {
+                    paymentId: null,
+                    paymentStatus: 'PENDING',
+                    paymentRequestInfo: null,
+                    paymentUpdatedAt: null,
+                    transactionRemark: null,
+                 }
+               : {
+                    paymentId: id,
+                    paymentStatus,
+                    paymentRequestInfo,
+                    paymentUpdatedAt: moment().toISOString(),
+                    transactionRemark: paymentTransactionInfo,
+                 }),
+         },
+      })
+      return res.status(200).json({ success: true, message: 'Cart updated!' })
+   } catch (error) {
+      logger('/api/payment/cart', error.message)
       return res.status(400).json({ success: false, error: error.message })
    }
 }
