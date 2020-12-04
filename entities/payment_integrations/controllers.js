@@ -56,7 +56,7 @@ export const initiate = async (req, res) => {
 
       return res.status(200).json({ success: true, data: insertPaymentRecord })
    } catch (error) {
-      logger('/api/payment/request/initiate', error.message)
+      logger('/api/payment/request/initiate', error)
       return res.status(400).json({ success: false, error: error.message })
    }
 }
@@ -104,7 +104,7 @@ export const processRequest = async (req, res) => {
 
       return res.status(200).json({ success: true, data: request })
    } catch (error) {
-      logger('/api/payment/request/process', error.message)
+      logger('/api/payment/request/process', error)
       return res.status(400).json({ success: false, error: error.message })
    }
 }
@@ -135,7 +135,7 @@ export const processTransaction = async (req, res) => {
       })
       return res.status(200).json({ success: true, data: { transaction } })
    } catch (error) {
-      logger('/api/payment/transaction/process', error.message)
+      logger('/api/payment/transaction/process', error)
       return res.status(400).json({ success: false, error: error.message })
    }
 }
@@ -202,7 +202,7 @@ export const handleCart = async (req, res) => {
       })
       return res.status(200).json({ success: true, message: 'Cart updated!' })
    } catch (error) {
-      logger('/api/payment/cart', error.message)
+      logger('/api/payment/cart', error)
       return res.status(400).json({ success: false, error: error.message })
    }
 }
@@ -218,7 +218,7 @@ export const discard = async (req, res) => {
          _set: { paymentStatus: 'DISCARDED' },
       })
    } catch (error) {
-      logger('/api/payment/discard', error.message)
+      logger('/api/payment/discard', error)
       return res.status(400).json({ success: false, error: error.message })
    }
 }

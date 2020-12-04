@@ -44,6 +44,11 @@ export const request = async ({ data = {}, keys = {} }) => {
 
       return order
    } catch (error) {
+      const { id } = data
+      await client.request(UPDATE_PAYMENT_RECORD, {
+         pk_columns: { id },
+         _set: { paymentStatus: 'DISCARDED' },
+      })
       throw error
    }
 }
@@ -67,6 +72,11 @@ export const transaction = async ({ data, payment }) => {
       )
       return updatePaymentTransaction
    } catch (error) {
+      const { id } = data
+      await client.request(UPDATE_PAYMENT_RECORD, {
+         pk_columns: { id: payment.id },
+         _set: { paymentStatus: 'DISCARDED' },
+      })
       throw error
    }
 }
