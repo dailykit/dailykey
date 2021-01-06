@@ -56,7 +56,7 @@ export const initiate = async (req, res) => {
 
       return res.status(200).json({ success: true, data: insertPaymentRecord })
    } catch (error) {
-      logger('/api/payment/request/initiate', error)
+      logger('/api/payment/request/initiate', JSON.stringify(error))
       return res.status(400).json({ success: false, error: error.message })
    }
 }
@@ -104,7 +104,7 @@ export const processRequest = async (req, res) => {
 
       return res.status(200).json({ success: true, data: request })
    } catch (error) {
-      logger('/api/payment/request/process', error)
+      logger('/api/payment/request/process', JSON.stringify(error))
       return res.status(400).json({ success: false, error: error.message })
    }
 }
@@ -135,7 +135,7 @@ export const processTransaction = async (req, res) => {
       })
       return res.status(200).json({ success: true, data: { transaction } })
    } catch (error) {
-      logger('/api/payment/transaction/process', error)
+      logger('/api/payment/transaction/process', JSON.stringify(error))
       return res.status(400).json({ success: false, error: error.message })
    }
 }
@@ -202,7 +202,7 @@ export const handleCart = async (req, res) => {
       })
       return res.status(200).json({ success: true, message: 'Cart updated!' })
    } catch (error) {
-      logger('/api/payment/cart', error)
+      logger('/api/payment/cart', JSON.stringify(error))
       return res.status(400).json({ success: false, error: error.message })
    }
 }
@@ -210,7 +210,6 @@ export const handleCart = async (req, res) => {
 export const discard = async (req, res) => {
    try {
       const { paymentId = '' } = req.body
-
       if (!paymentId) throw Error('Payment Id is required!')
 
       await client.request(UPDATE_PAYMENT_RECORD, {
@@ -218,7 +217,7 @@ export const discard = async (req, res) => {
          _set: { paymentStatus: 'DISCARDED' },
       })
    } catch (error) {
-      logger('/api/payment/discard', error)
+      logger('/api/payment/discard', JSON.stringify(error))
       return res.status(400).json({ success: false, error: error.message })
    }
 }

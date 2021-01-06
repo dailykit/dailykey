@@ -72,7 +72,6 @@ export const transaction = async ({ data, payment }) => {
       )
       return updatePaymentTransaction
    } catch (error) {
-      const { id } = data
       await client.request(UPDATE_PAYMENT_RECORD, {
          pk_columns: { id: payment.id },
          _set: { paymentStatus: 'DISCARDED' },
