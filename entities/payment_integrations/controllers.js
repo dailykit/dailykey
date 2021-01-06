@@ -148,6 +148,7 @@ export const handleCart = async (req, res) => {
          paymentStatus,
          paymentRequestInfo,
          paymentPartnershipId,
+         paymentTransactionId,
          paymentTransactionInfo,
       } = req.body.event.data.new
 
@@ -186,6 +187,7 @@ export const handleCart = async (req, res) => {
             ...(paymentStatus === 'DISCARDED'
                ? {
                     paymentId: null,
+                    transactionId: null,
                     paymentStatus: 'PENDING',
                     paymentRequestInfo: null,
                     paymentUpdatedAt: null,
@@ -195,6 +197,7 @@ export const handleCart = async (req, res) => {
                     paymentId: id,
                     paymentStatus,
                     paymentRequestInfo,
+                    transactionId: paymentTransactionId,
                     paymentUpdatedAt: moment().toISOString(),
                     transactionRemark: paymentTransactionInfo,
                  }),
