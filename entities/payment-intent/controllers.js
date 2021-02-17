@@ -1,4 +1,4 @@
-import { GraphQLClient, request } from 'graphql-request'
+import { GraphQLClient } from 'graphql-request'
 
 import stripe from '../../lib/stripe'
 import { isObjectValid, logger } from '../../utils'
