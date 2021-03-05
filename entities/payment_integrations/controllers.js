@@ -42,7 +42,7 @@ export const initiate = async (req, res) => {
          {
             object: {
                amount,
-               orderCartId: cartId,
+               cartId,
                paymentStatus: 'PENDING',
                paymentRequestInfo: req.body,
                customerKeycloakId: keycloakId,
@@ -63,7 +63,7 @@ export const initiate = async (req, res) => {
 
 export const processRequest = async (req, res) => {
    try {
-      const { id, paymentPartnershipId, orderCartId } = req.body.event.data.new
+      const { id, paymentPartnershipId, cartId } = req.body.event.data.new
 
       const { partnership = null } = await client.request(PAYMENT_PARTNERSHIP, {
          id: paymentPartnershipId,
@@ -144,7 +144,7 @@ export const handleCart = async (req, res) => {
    try {
       const {
          id,
-         orderCartId,
+         cartId,
          paymentStatus,
          paymentRequestInfo,
          paymentPartnershipId,
@@ -182,7 +182,7 @@ export const handleCart = async (req, res) => {
       )
 
       await datahubClient.request(UPDATE_CART, {
-         id: orderCartId,
+         id: cartId,
          _set: {
             ...(paymentStatus === 'DISCARDED'
                ? {

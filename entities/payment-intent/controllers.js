@@ -66,10 +66,12 @@ export const create = async (req, res) => {
             )
 
             await datahubClient.request(UPDATE_CART, {
-               transactionId: intent.id,
-               transactionRemark: intent,
-               id: { _eq: transferGroup },
-               paymentStatus: STATUS[intent.status],
+               id: Number(transferGroup),
+               set: {
+                  transactionId: intent.id,
+                  transactionRemark: intent,
+                  paymentStatus: STATUS[intent.status],
+               },
             })
 
             return res.status(200).json({
@@ -168,13 +170,9 @@ const FETCH_ORG_BY_STRIPE_ID = `
 `
 
 const UPDATE_CART = `
-   mutation updateCart($id: Int_comparison_exp!, $paymentStatus: String!, $transactionId: String!, $transactionRemark: jsonb!) {
-      updateCart(
-         where: {id: $id}, 
-         _set: {paymentStatus: $paymentStatus, transactionId: $transactionId, transactionRemark: $transactionRemark}) {
-         returning {
-            id
-         }
+   mutation updateCart($id: Int!, $_set: order_cart_set_input) {
+      updateCart(pk_columns: { id: $id }, _set: $_set) {
+         id
       }
-   } 
+   }
 `

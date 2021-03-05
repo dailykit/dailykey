@@ -44,8 +44,8 @@ export const UPDATE_PAYMENT_RECORD = `
 `
 
 export const UPDATE_CART = `
-   mutation updateCart($id: Int!, $_set: crm_orderCart_set_input!) {
-      updateCartByPK(pk_columns: { id: $id }, _set: $_set) {
+   mutation updateCart($id: Int!, $_set: order_cart_set_input!) {
+      updateCart(pk_columns: { id: $id }, _set: $_set) {
          id
       }
    }
@@ -55,7 +55,7 @@ export const PAYMENT = `
    query payment($id: uuid!) {
       payment: paymentHub_payment_by_pk(id: $id) {
          id
-         orderCartId
+         cartId
          partnership: paymentPartnership {
             organization {
                datahubUrl

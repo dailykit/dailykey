@@ -13,9 +13,7 @@ const STORE_SETTINGS = `
 `
 
 const CREATE_STORE_SETTING = `
-   mutation createStoreSetting(
-      $object: onlineStore_storeSetting_insert_input!
-   ) {
+   mutation createStoreSetting($object: brands_storeSetting_insert_input!) {
       createStoreSetting(object: $object) {
          id
       }
@@ -25,7 +23,7 @@ const CREATE_STORE_SETTING = `
 const UPDATE_STORE_SETTING = `
    mutation updateStoreSetting(
       $identifier: String_comparison_exp!
-      $_set: onlineStore_storeSetting_set_input!
+      $_set: brands_storeSetting_set_input!
    ) {
       updateStoreSetting(where: { identifier: $identifier }, _set: $_set) {
          affected_rows
