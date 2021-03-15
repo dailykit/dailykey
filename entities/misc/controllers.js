@@ -113,10 +113,12 @@ export const createCustomerByClient = async (req, res) => {
 export const authorizeRequest = async (req, res) => {
    try {
       const organizationId = req.body.headers['Organization-Id']
+      const keycloakId = req.body.headers['Keycloak-Id']
 
       return res.status(200).json({
-         'X-Hasura-Role': 'limited',
+         'X-Hasura-Role': 'consumer',
          'X-Hasura-User-Id': organizationId,
+         'X-Hasura-Keycloak-Id': keycloakId,
       })
    } catch (error) {
       logger('/api/webhooks/authorize-request', error.message)
