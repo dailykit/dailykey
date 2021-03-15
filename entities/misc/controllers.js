@@ -116,7 +116,7 @@ export const authorizeRequest = async (req, res) => {
       const keycloakId = req.body.headers['Keycloak-Id']
 
       return res.status(200).json({
-         'X-Hasura-Role': 'consumer',
+         'X-Hasura-Role': keycloakId ? 'consumer' : 'limited',
          'X-Hasura-User-Id': organizationId,
          'X-Hasura-Keycloak-Id': keycloakId,
       })
