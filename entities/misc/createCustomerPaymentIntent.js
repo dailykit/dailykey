@@ -10,7 +10,12 @@ const client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
 
 export const createCustomerPaymentIntent = async (req, res) => {
    try {
-      const { organizationId, cart, customer } = req.body
+      const {
+         cart,
+         customer,
+         organizationId,
+         statementDescriptor = '',
+      } = req.body
 
       const { organization } = await client.request(FETCH_ORG_CA_ID, {
          id: organizationId,
@@ -33,19 +38,24 @@ export const createCustomerPaymentIntent = async (req, res) => {
             {
                object: {
                   status: '',
-                  currency: 'usd',
+                  organizationId,
+                  statementDescriptor,
                   amount: chargeAmount,
                   transferGroup: `${cart.id}`,
                   paymentMethod: customer.paymentMethod,
                   onBehalfOf: organization.stripeAccountId,
                   stripeCustomerId: customer.stripeCustomerId,
-                  organizationTransfers: {
-                     data: {
-                        amount: transferAmount,
-                        transferGroup: `${cart.id}`,
-                        destination: organization.stripeAccountId,
+                  currency: organization.currency.toLowerCase(),
+                  stripeAccountType: organization.stripeAccountType,
+                  ...(organization.stripeAccountType === 'express' && {
+                     organizationTransfers: {
+                        data: {
+                           amount: transferAmount,
+                           transferGroup: `${cart.id}`,
+                           destination: organization.stripeAccountId,
+                        },
                      },
-                  },
+                  }),
                },
             }
          )
@@ -73,10 +83,12 @@ export const createCustomerPaymentIntent = async (req, res) => {
 const FETCH_ORG_CA_ID = `
    query organization($id: Int!) {
       organization(id: $id) {
-         chargeFixed,
-         chargeCurrency,
+         currency
+         chargeFixed
+         chargeCurrency
          stripeAccountId
-         chargePercentage,
+         chargePercentage
+         stripeAccountType
       }
    } 
 `
