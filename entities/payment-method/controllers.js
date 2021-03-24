@@ -4,7 +4,15 @@ import { isObjectValid } from '../../utils'
 export const get = async (req, res) => {
    try {
       const { id } = req.params
-      const response = await stripe.paymentMethods.retrieve(id)
+      const { accountId } = req.query
+      let response = null
+      if (accountId) {
+         response = await stripe.paymentMethods.retrieve(id, {
+            stripeAccount: accountId,
+         })
+      } else {
+         response = await stripe.paymentMethods.retrieve(id)
+      }
 
       if (isObjectValid(response)) {
          return res.json({ success: true, data: response })
