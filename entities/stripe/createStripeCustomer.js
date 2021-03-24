@@ -23,6 +23,13 @@ export const createStripeCustomer = async (req, res) => {
          id: organizationId,
       })
 
+      if (organization.stripeAccountType === 'express') {
+         return res.status(200).json({
+            success: true,
+            message: 'Skipped due to customer being of express parent account.',
+         })
+      }
+
       const response = await stripe.customers.create(
          {
             email: customer.email,
@@ -33,9 +40,7 @@ export const createStripeCustomer = async (req, res) => {
             }`,
          },
          {
-            ...(organization.stripeAccountType === 'standard' && {
-               stripeAccount: organization.stripeAccountId,
-            }),
+            stripeAccount: organization.stripeAccountId,
          }
       )
 
