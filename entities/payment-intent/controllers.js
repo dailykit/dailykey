@@ -37,11 +37,7 @@ export const create = async (req, res) => {
 
       const datahub = new GraphQLClient(
          `https://${organization.organizationUrl}/datahub/v1/graphql`,
-         {
-            headers: {
-               'x-hasura-admin-secret': organization.adminSecret,
-            },
-         }
+         { headers: { 'x-hasura-admin-secret': organization.adminSecret } }
       )
 
       if (organizations.length > 0) {
@@ -67,37 +63,30 @@ export const create = async (req, res) => {
                { stripeAccount: organization.stripeAccountId }
             )
             const result = await stripe.invoices.pay(invoice.id)
-            if (result.payment_intent) {
-               const paymentIntent = await stripe.paymentIntents.retrieve(
-                  result.payment_intent
-               )
-               await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
-                  id,
-                  _set: {
-                     stripeInvoiceId: result.id,
-                     stripeInvoiceDetails: result,
-                     transactionRemark: paymentIntent,
-                     status: STATUS[paymentIntent.status],
-                     stripePaymentIntentId: paymentIntent.id,
-                  },
-               })
-               await datahub.request(UPDATE_CART, {
-                  pk_columns: { id: transferGroup },
-                  _set: {
-                     stripeInvoiceId: result.id,
-                     stripeInvoiceDetails: result,
-                     transactionId: paymentIntent.id,
-                     transactionRemark: paymentIntent,
-                     paymentStatus: STATUS[paymentIntent.status],
-                  },
-               })
-               return res.status(200).json({
-                  success: true,
-                  data: result,
-               })
-            } else {
-               throw Error('Failed to create payment intent!')
-            }
+            const paymentIntent = await stripe.paymentIntents.retrieve(
+               result.payment_intent
+            )
+            await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
+               id,
+               _set: {
+                  stripeInvoiceId: result.id,
+                  stripeInvoiceDetails: result,
+                  transactionRemark: paymentIntent,
+                  status: STATUS[paymentIntent.status],
+                  stripePaymentIntentId: paymentIntent.id,
+               },
+            })
+            await datahub.request(UPDATE_CART, {
+               pk_columns: { id: transferGroup },
+               _set: {
+                  stripeInvoiceId: result.id,
+                  stripeInvoiceDetails: result,
+                  transactionId: paymentIntent.id,
+                  transactionRemark: paymentIntent,
+                  paymentStatus: STATUS[paymentIntent.status],
+               },
+            })
+            return res.status(200).json({ success: true, data: result })
          } else {
             const intent = await stripe.paymentIntents.create({
                amount,
