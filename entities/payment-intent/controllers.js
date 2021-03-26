@@ -31,7 +31,7 @@ export const create = async (req, res) => {
          statementDescriptor,
       } = req.body.event.data.new
 
-      const { organizations } = await client.request(FETCH_ORG_BY_STRIPE_ID, {
+      const { organization } = await client.request(FETCH_ORG_BY_STRIPE_ID, {
          id: organizationId,
       })
 
@@ -39,99 +39,241 @@ export const create = async (req, res) => {
          `https://${organization.organizationUrl}/datahub/v1/graphql`,
          { headers: { 'x-hasura-admin-secret': organization.adminSecret } }
       )
-
-      if (organizations.length > 0) {
-         const [organization] = organizations
-         if (stripeAccountType === 'standard') {
-            const invoice = await stripe.invoices.create(
-               {
-                  customer: stripeCustomerId,
-                  default_payment_method: paymentMethod,
-                  statement_descriptor: statementDescriptor,
-                  metadata: { cartId: transferGroup },
-               },
-               { stripeAccount: organization.stripeAccountId }
-            )
-            await stripe.invoiceItems.create(
-               {
-                  amount,
-                  currency,
-                  invoice: invoice.id,
-                  customer: stripeCustomerId,
-                  description: 'Weekly Subscription',
-               },
-               { stripeAccount: organization.stripeAccountId }
-            )
-            const result = await stripe.invoices.pay(invoice.id)
-            const paymentIntent = await stripe.paymentIntents.retrieve(
-               result.payment_intent
-            )
-            await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
-               id,
-               _set: {
-                  stripeInvoiceId: result.id,
-                  stripeInvoiceDetails: result,
-                  transactionRemark: paymentIntent,
-                  status: STATUS[paymentIntent.status],
-                  stripePaymentIntentId: paymentIntent.id,
-               },
-            })
-            await datahub.request(UPDATE_CART, {
-               pk_columns: { id: transferGroup },
-               _set: {
-                  stripeInvoiceId: result.id,
-                  stripeInvoiceDetails: result,
-                  transactionId: paymentIntent.id,
-                  transactionRemark: paymentIntent,
-                  paymentStatus: STATUS[paymentIntent.status],
-               },
-            })
-            return res.status(200).json({ success: true, data: result })
-         } else {
-            const intent = await stripe.paymentIntents.create({
+      if (stripeAccountType === 'standard') {
+         const item = await stripe.invoiceItems.create(
+            {
                amount,
                currency,
-               confirm: true,
-               on_behalf_of: onBehalfOf,
                customer: stripeCustomerId,
-               payment_method: paymentMethod,
-               transfer_group: transferGroup,
-               statement_descriptor: statementDescriptor,
-               return_url: `https://${organization.organizationUrl}/store/paymentProcessing`,
-            })
-            if (intent && intent.id) {
-               await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
-                  id,
-                  _set: {
-                     transactionRemark: intent,
-                     status: STATUS[intent.status],
-                     stripePaymentIntentId: intent.id,
-                  },
-               })
+               description: 'Weekly Subscription',
+            },
+            { stripeAccount: organization.stripeAccountId }
+         )
+         console.log('item', item.id)
 
-               await datahub.request(UPDATE_CART, {
-                  pk_columns: { id: transferGroup },
-                  _set: {
-                     transactionId: intent.id,
-                     transactionRemark: intent,
-                     paymentStatus: STATUS[intent.status],
-                  },
-               })
+         const invoice = await stripe.invoices.create(
+            {
+               customer: stripeCustomerId,
+               default_payment_method: paymentMethod,
+               statement_descriptor:
+                  statementDescriptor || organization.organizationName,
+               metadata: {
+                  organizationId,
+                  cartId: transferGroup,
+                  customerPaymentIntentId: id,
+                  stripeAccountId: organization.stripeAccountId,
+               },
+            },
+            { stripeAccount: organization.stripeAccountId }
+         )
+         console.log('invoice', invoice.id)
+         await handleInvoice({
+            invoice,
+            datahub,
+         })
 
-               return res.status(200).json({
-                  success: true,
-                  data: intent,
-               })
-            } else {
-               throw Error('Failed to create payment intent!')
-            }
-         }
+         const finalizedInvoice = await stripe.invoices.finalizeInvoice(
+            invoice.id,
+            { stripeAccount: organization.stripeAccountId }
+         )
+         console.log('finalizedInvoice', finalizedInvoice.id)
+         await handleInvoice({
+            invoice,
+            datahub,
+         })
+
+         const result = await stripe.invoices.pay(finalizedInvoice.id, {
+            stripeAccount: organization.stripeAccountId,
+         })
+         console.log('result', result.id)
+         await handleInvoice({
+            invoice,
+            datahub,
+         })
+
+         const paymentIntent = await stripe.paymentIntents.retrieve(
+            result.payment_intent,
+            { stripeAccount: organization.stripeAccountId }
+         )
+         console.log('paymentIntent', paymentIntent.id)
+         await handlePaymentIntent({
+            intent: paymentIntent,
+            datahub,
+            stripeAccountId: organization.stripeAccountId,
+         })
+
+         return res.status(200).json({ success: true, data: result })
       } else {
-         throw Error('No linked organization!')
+         const intent = await stripe.paymentIntents.create({
+            amount,
+            currency,
+            confirm: true,
+            on_behalf_of: onBehalfOf,
+            customer: stripeCustomerId,
+            payment_method: paymentMethod,
+            transfer_group: transferGroup,
+            statement_descriptor:
+               statementDescriptor || organization.organizationName,
+            return_url: `https://${organization.organizationUrl}/store/paymentProcessing`,
+         })
+         if (intent && intent.id) {
+            await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
+               id,
+               _prepend: { transactionRemarkHistory: intent },
+               _set: {
+                  transactionRemark: intent,
+                  status: STATUS[intent.status],
+                  stripePaymentIntentId: intent.id,
+               },
+            })
+
+            await datahub.request(UPDATE_CART, {
+               pk_columns: { id: transferGroup },
+               _prepend: { transactionRemarkHistory: intent },
+               _set: {
+                  transactionId: intent.id,
+                  transactionRemark: intent,
+                  paymentStatus: STATUS[intent.status],
+               },
+            })
+
+            return res.status(200).json({
+               success: true,
+               data: intent,
+            })
+         } else {
+            throw Error('Failed to create payment intent!')
+         }
       }
    } catch (error) {
       logger('/api/payment-intent', error)
-      return res.status(404).json({ success: false, error })
+      return res.status(500).json({ success: false, error })
+   }
+}
+
+export const retry = async (req, res) => {
+   try {
+      const { invoiceId, stripeAccountId } = req.body
+      if (!invoiceId) throw Error('Invoice ID is required!')
+
+      const stripeAccount = stripeAccountId
+
+      const invoice = await stripe.invoices.retrieve(invoiceId, {
+         stripeAccount,
+      })
+
+      const { organization } = await client.request(FETCH_ORG_BY_STRIPE_ID, {
+         id: invoice.metadata.organizationId,
+      })
+
+      const datahub = new GraphQLClient(
+         `https://${organization.organizationUrl}/datahub/v1/graphql`,
+         { headers: { 'x-hasura-admin-secret': organization.adminSecret } }
+      )
+
+      const paidInvoice = await stripe.invoices.pay(invoiceId, {
+         stripeAccount,
+      })
+      console.log('paidInvoice', paidInvoice.id)
+      await handleInvoice({
+         invoice: paidInvoice,
+         datahub,
+      })
+
+      const intent = await stripe.paymentIntents.retrieve(
+         invoice.payment_intent,
+         { stripeAccount }
+      )
+      console.log('intent', intent.id)
+      await handlePaymentIntent({
+         intent,
+         datahub,
+      })
+   } catch (error) {
+      return res.status(500).json({ success: false, error })
+   }
+}
+
+const handleInvoice = async ({ invoice, datahub }) => {
+   try {
+      let intent = null
+      if (invoice.payment_intent) {
+         intent = await stripe.paymentIntents.retrieve(invoice.payment_intent, {
+            stripeAccount: invoice.metadata.stripeAccountId,
+         })
+      }
+      await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
+         id: invoice.metadata.customerPaymentIntentId,
+         _prepend: {
+            stripeInvoiceHistory: invoice,
+            ...(intent && { transactionRemarkHistory: intent }),
+         },
+         _set: {
+            stripeInvoiceId: invoice.id,
+            stripeInvoiceDetails: invoice,
+            ...(intent && {
+               transactionRemark: intent,
+               status: STATUS[intent.status],
+               stripePaymentIntentId: intent.id,
+            }),
+         },
+      })
+      await datahub.request(UPDATE_CART, {
+         pk_columns: { id: invoice.metadata.cartId },
+         _prepend: {
+            stripeInvoiceHistory: invoice,
+            ...(intent && { transactionRemarkHistory: intent }),
+         },
+         _set: {
+            stripeInvoiceId: invoice.id,
+            stripeInvoiceDetails: invoice,
+            ...(intent && {
+               transactionId: intent.id,
+               transactionRemark: intent,
+               paymentStatus: STATUS[intent.status],
+            }),
+         },
+      })
+   } catch (error) {
+      throw error
+   }
+}
+
+const handlePaymentIntent = async ({ intent, datahub, stripeAccountId }) => {
+   try {
+      const invoice = await stripe.invoices.retrieve(intent.invoice, {
+         stripeAccount: stripeAccountId,
+      })
+      await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
+         id: invoice.metadata.customerPaymentIntentId,
+         _prepend: {
+            stripeInvoiceHistory: invoice,
+            transactionRemarkHistory: intent,
+         },
+         _set: {
+            stripeInvoiceId: invoice.id,
+            stripeInvoiceDetails: invoice,
+            transactionRemark: intent,
+            status: STATUS[intent.status],
+            stripePaymentIntentId: intent.id,
+         },
+      })
+      await datahub.request(UPDATE_CART, {
+         pk_columns: { id: invoice.metadata.cartId },
+         _prepend: {
+            stripeInvoiceHistory: invoice,
+            transactionRemarkHistory: intent,
+         },
+         _set: {
+            stripeInvoiceId: invoice.id,
+            stripeInvoiceDetails: invoice,
+            transactionId: intent.id,
+            transactionRemark: intent,
+            paymentStatus: STATUS[intent.status],
+         },
+      })
+   } catch (error) {
+      throw error
    }
 }
 
@@ -197,12 +339,18 @@ export const list = async (req, res) => {
 }
 
 const UPDATE_CUSTOMER_PAYMENT_INTENT = `
-   mutation updateCustomerPaymentIntent($id: uuid!, $_set: stripe_customerPaymentIntent_set_input!) {
+   mutation updateCustomerPaymentIntent(
+      $id: uuid!
+      $_set: stripe_customerPaymentIntent_set_input = {}
+      $_prepend: stripe_customerPaymentIntent_prepend_input = {}
+   ) {
       updateCustomerPaymentIntent(
-         pk_columns: {id: $id}, 
-         _set:  $_set
+         pk_columns: { id: $id }
+         _set: $_set
+         _prepend: $_prepend
       ) {
          id
+         stripeInvoiceHistory
       }
    }
 `
@@ -213,6 +361,7 @@ const FETCH_ORG_BY_STRIPE_ID = `
          id
          adminSecret
          organizationUrl
+         organizationName
          stripeAccountId
       }
    }
@@ -221,9 +370,10 @@ const FETCH_ORG_BY_STRIPE_ID = `
 const UPDATE_CART = `
    mutation updateCart(
       $pk_columns: order_cart_pk_columns_input!
-      $_set: order_cart_set_input!
+      $_set: order_cart_set_input = {}
+      $_prepend: order_cart_prepend_input = {}
    ) {
-      updateCart(pk_columns: $pk_columns, _set: $_set) {
+      updateCart(pk_columns: $pk_columns, _set: $_set, _prepend: $_append) {
          id
       }
    }
