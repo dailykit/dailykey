@@ -57,6 +57,15 @@ export const create = async (req, res) => {
                default_payment_method: paymentMethod,
                statement_descriptor:
                   statementDescriptor || organization.organizationName,
+               days_until_due: 1,
+               collection_method: 'send_invoice',
+               payment_settings: {
+                  payment_method_options: {
+                     card: {
+                        request_three_d_secure: 'any',
+                     },
+                  },
+               },
                metadata: {
                   organizationId,
                   cartId: transferGroup,
@@ -373,7 +382,7 @@ const UPDATE_CART = `
       $_set: order_cart_set_input = {}
       $_prepend: order_cart_prepend_input = {}
    ) {
-      updateCart(pk_columns: $pk_columns, _set: $_set, _prepend: $_append) {
+      updateCart(pk_columns: $pk_columns, _set: $_set, _prepend: $_prepend) {
          id
       }
    }
