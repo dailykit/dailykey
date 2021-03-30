@@ -16,6 +16,48 @@ const STATUS = {
    succeeded: 'SUCCEEDED',
 }
 
+const ORGANIZATION = `
+   query organization($id: Int!) {
+      organization(id: $id) {
+         id
+         adminSecret
+         organizationUrl
+         stripeAccountId
+         organizationName
+         stripeAccountType
+      }
+   }
+`
+
+const UPDATE_CUSTOMER_PAYMENT_INTENT = `
+   mutation updateCustomerPaymentIntent(
+      $id: uuid!
+      $_set: stripe_customerPaymentIntent_set_input = {}
+      $_prepend: stripe_customerPaymentIntent_prepend_input = {}
+   ) {
+      updateCustomerPaymentIntent(
+         pk_columns: { id: $id }
+         _set: $_set
+         _prepend: $_prepend
+      ) {
+         id
+         stripeInvoiceHistory
+      }
+   }
+`
+
+const UPDATE_CART = `
+   mutation updateCart(
+      $pk_columns: order_cart_pk_columns_input!
+      $_set: order_cart_set_input = {}
+      $_prepend: order_cart_prepend_input = {}
+   ) {
+      updateCart(pk_columns: $pk_columns, _set: $_set, _prepend: $_prepend) {
+         id
+      }
+   }
+`
+
 export const create = async (req, res) => {
    try {
       const {
@@ -29,17 +71,9 @@ export const create = async (req, res) => {
          stripeCustomerId,
          stripeAccountType,
          statementDescriptor,
-         stripePaymentIntentId,
-         transactionRemark,
-         stripeInvoiceId,
-         stripeInvoiceDetails,
-         paymentRetryAttempt,
-         invoiceSendAttempt,
-         stripeInvoiceHistory,
-         transactionRemarkHistory,
       } = req.body.event.data.new
 
-      const { organization } = await client.request(FETCH_ORG_BY_STRIPE_ID, {
+      const { organization } = await client.request(ORGANIZATION, {
          id: organizationId,
       })
 
@@ -179,7 +213,7 @@ export const retry = async (req, res) => {
          stripeAccount,
       })
 
-      const { organization } = await client.request(FETCH_ORG_BY_STRIPE_ID, {
+      const { organization } = await client.request(ORGANIZATION, {
          id: invoice.metadata.organizationId,
       })
 
