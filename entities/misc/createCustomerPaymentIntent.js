@@ -24,8 +24,8 @@ export const createCustomerPaymentIntent = async (req, res) => {
          FETCH_CUSTOMER_PAYMENT_INTENT,
          {
             where: {
-               cartId: cart.id,
-               organizationId: organizationId,
+               transferGroup: { _eq: `${cart.id}` },
+               organizationId: { _eq: organizationId },
             },
          }
       )
