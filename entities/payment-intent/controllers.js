@@ -10,6 +10,7 @@ const client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
 })
 
 const STATUS = {
+   requires_payment_method: 'REQUIRES_PAYMENT_METHOD',
    requires_action: 'REQUIRES_ACTION',
    processing: 'PROCESSING',
    canceled: 'CANCELLED',
@@ -81,6 +82,7 @@ export const create = async (req, res) => {
          `https://${organization.organizationUrl}/datahub/v1/graphql`,
          { headers: { 'x-hasura-admin-secret': organization.adminSecret } }
       )
+
       if (stripeAccountType === 'standard') {
          const item = await stripe.invoiceItems.create(
             {
@@ -118,40 +120,33 @@ export const create = async (req, res) => {
             { stripeAccount: organization.stripeAccountId }
          )
          console.log('invoice', invoice.id)
-         await handleInvoice({
-            invoice,
-            datahub,
-         })
+         await handleInvoice({ invoice, datahub })
 
          const finalizedInvoice = await stripe.invoices.finalizeInvoice(
             invoice.id,
             { stripeAccount: organization.stripeAccountId }
          )
          console.log('finalizedInvoice', finalizedInvoice.id)
-         await handleInvoice({
-            invoice,
-            datahub,
-         })
+         await handleInvoice({ invoice, datahub })
 
          const result = await stripe.invoices.pay(finalizedInvoice.id, {
             stripeAccount: organization.stripeAccountId,
          })
          console.log('result', result.id)
-         await handleInvoice({
-            invoice,
-            datahub,
-         })
+         await handleInvoice({ invoice, datahub })
 
-         const paymentIntent = await stripe.paymentIntents.retrieve(
-            result.payment_intent,
-            { stripeAccount: organization.stripeAccountId }
-         )
-         console.log('paymentIntent', paymentIntent.id)
-         await handlePaymentIntent({
-            intent: paymentIntent,
-            datahub,
-            stripeAccountId: organization.stripeAccountId,
-         })
+         if (result.payment_intent) {
+            const paymentIntent = await stripe.paymentIntents.retrieve(
+               result.payment_intent,
+               { stripeAccount: organization.stripeAccountId }
+            )
+            console.log('paymentIntent', paymentIntent.id)
+            await handlePaymentIntent({
+               datahub,
+               intent: paymentIntent,
+               stripeAccountId: organization.stripeAccountId,
+            })
+         }
 
          return res.status(200).json({ success: true, data: result })
       } else {
@@ -226,10 +221,7 @@ export const retry = async (req, res) => {
          stripeAccount,
       })
       console.log('paidInvoice', paidInvoice.id)
-      await handleInvoice({
-         invoice: paidInvoice,
-         datahub,
-      })
+      await handleInvoice({ invoice: paidInvoice, datahub })
 
       const intent = await stripe.paymentIntents.retrieve(
          invoice.payment_intent,
@@ -239,6 +231,7 @@ export const retry = async (req, res) => {
       await handlePaymentIntent({
          intent,
          datahub,
+         stripeAccountId,
       })
    } catch (error) {
       return res.status(500).json({ success: false, error })
