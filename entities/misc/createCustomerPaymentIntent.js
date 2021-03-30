@@ -23,24 +23,24 @@ export const createCustomerPaymentIntent = async (req, res) => {
       const { customerPaymentIntents } = await client.request(
          FETCH_CUSTOMER_PAYMENT_INTENT,
          {
-            organizationId: organizationId,
-            cartId: `${cart.id}`,
+            where: {
+               cartId: cart.id,
+               organizationId: organizationId,
+            },
          }
       )
 
       if (customerPaymentIntents.length > 0) {
-         const customerPaymentIntent = await client.request(
-            RETRY_CUSTOMER_PAYMENT_INTENT,
-            {
-               id: customerPaymentIntents[0].id,
-               _set: {
-                  paymentMethod: customer.paymentMethod,
-               },
-            }
-         )
+         const [customerPaymentIntent] = customerPaymentIntents
+
+         const result = await client.request(RETRY_CUSTOMER_PAYMENT_INTENT, {
+            id: customerPaymentIntent.id,
+            _inc: { paymentRetryAttempt: 1 },
+            _set: { paymentMethod: customer.paymentMethod },
+         })
          return res.json({
             success: true,
-            data: { customerPaymentIntent },
+            data: result,
             message: 'Payment request has been reattempted',
          })
       } else {
@@ -50,13 +50,15 @@ export const createCustomerPaymentIntent = async (req, res) => {
             const percentDeduction =
                chargeAmount * (organization.chargePercentage / 100)
 
-               const transferAmount = (
+            const transferAmount = (
                chargeAmount -
                fixedDeduction -
                percentDeduction
             ).toFixed(0)
 
-            const customerPaymentIntent = await client.request(CREATE_CUSTOMER_PAYMENT_INTENT, {
+            const customerPaymentIntent = await client.request(
+               CREATE_CUSTOMER_PAYMENT_INTENT,
+               {
                   object: {
                      organizationId,
                      statementDescriptor,
@@ -77,9 +79,10 @@ export const createCustomerPaymentIntent = async (req, res) => {
                         },
                      }),
                   },
-               })
+               }
+            )
 
-               return res.json({
+            return res.json({
                success: true,
                data: { customerPaymentIntent },
                message: 'Payment request has been initiated!',
@@ -115,28 +118,14 @@ const FETCH_ORG_CA_ID = `
 `
 
 const FETCH_CUSTOMER_PAYMENT_INTENT = `
-query customerPaymentIntents($organizationId: Int!, $cartId: String!) {
-   customerPaymentIntents(where: {organizationId: {_eq: $organizationId}, transferGroup: {_eq: $cartId}}) {
-     amount
-      id
-      invoiceSendAttempt
-      amount
-      created_at
-      currency
-      onBehalfOf
-      paymentMethod
-      paymentRetryAttempt
-      statementDescriptor
-      status
-      stripeAccountType
-      stripeCustomerId
-      stripeInvoiceId
-      stripePaymentIntentId
-      transferGroup
+   query customerPaymentIntents(
+      $where: stripe_customerPaymentIntent_bool_exp!
+   ) {
+      customerPaymentIntents(where: $where) {
+         id
+      }
    }
- }
- 
- `
+`
 
 const CREATE_CUSTOMER_PAYMENT_INTENT = `
    mutation createCustomerPaymentIntent($object: stripe_customerPaymentIntent_insert_input!) {
@@ -146,25 +135,32 @@ const CREATE_CUSTOMER_PAYMENT_INTENT = `
    }
 `
 const RETRY_CUSTOMER_PAYMENT_INTENT = `
-mutation updateCustomerPaymentIntent($id: uuid!, $_set: stripe_customerPaymentIntent_set_input!) {
-   updateCustomerPaymentIntent(pk_columns: {id: $id}, _inc: {paymentRetryAttempt: 1}, _set: $_set) {
-     id
-     amount
-     invoiceSendAttempt
-     amount
-     created_at
-     currency
-     onBehalfOf
-     paymentMethod
-     paymentRetryAttempt
-     statementDescriptor
-     status
-     stripeAccountType
-     stripeCustomerId
-     stripeInvoiceId
-     stripePaymentIntentId
-     transferGroup
+   mutation updateCustomerPaymentIntent(
+      $id: uuid!
+      $_set: stripe_customerPaymentIntent_set_input!
+      $_inc: stripe_customerPaymentIntent_inc_input!
+   ) {
+      updateCustomerPaymentIntent(
+         pk_columns: { id: $id }
+         _inc: $_inc
+         _set: $_set
+      ) {
+         id
+         amount
+         invoiceSendAttempt
+         amount
+         created_at
+         currency
+         onBehalfOf
+         paymentMethod
+         paymentRetryAttempt
+         statementDescriptor
+         status
+         stripeAccountType
+         stripeCustomerId
+         stripeInvoiceId
+         stripePaymentIntentId
+         transferGroup
+      }
    }
- }
- 
- `
+`
