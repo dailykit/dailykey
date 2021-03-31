@@ -246,17 +246,19 @@ const handleInvoice = async ({ invoice, datahub }) => {
             stripeAccount: invoice.metadata.stripeAccountId,
          })
       }
+      const { lines: invoiceLines = {}, ...invoiceRest } = invoice
+      const { lines: intentLines = {}, ...intentRest } = intent || {}
       await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
          id: invoice.metadata.customerPaymentIntentId,
          _prepend: {
-            stripeInvoiceHistory: invoice,
-            ...(intent && { transactionRemarkHistory: intent }),
+            stripeInvoiceHistory: invoiceRest,
+            ...(intent && { transactionRemarkHistory: intentRest }),
          },
          _set: {
             stripeInvoiceId: invoice.id,
-            stripeInvoiceDetails: invoice,
+            stripeInvoiceDetails: invoiceRest,
             ...(intent && {
-               transactionRemark: intent,
+               transactionRemark: intentRest,
                status: STATUS[intent.status],
                stripePaymentIntentId: intent.id,
             }),
@@ -265,15 +267,15 @@ const handleInvoice = async ({ invoice, datahub }) => {
       await datahub.request(UPDATE_CART, {
          pk_columns: { id: invoice.metadata.cartId },
          _prepend: {
-            stripeInvoiceHistory: invoice,
-            ...(intent && { transactionRemarkHistory: intent }),
+            stripeInvoiceHistory: invoiceRest,
+            ...(intent && { transactionRemarkHistory: intentRest }),
          },
          _set: {
             stripeInvoiceId: invoice.id,
-            stripeInvoiceDetails: invoice,
+            stripeInvoiceDetails: invoiceRest,
             ...(intent && {
                transactionId: intent.id,
-               transactionRemark: intent,
+               transactionRemark: intentRest,
                paymentStatus: STATUS[intent.status],
             }),
          },
@@ -288,16 +290,19 @@ const handlePaymentIntent = async ({ intent, datahub, stripeAccountId }) => {
       const invoice = await stripe.invoices.retrieve(intent.invoice, {
          stripeAccount: stripeAccountId,
       })
+
+      const { lines: invoiceLines = {}, ...invoiceRest } = invoice
+      const { lines: intentLines = {}, ...intentRest } = intent
       await client.request(UPDATE_CUSTOMER_PAYMENT_INTENT, {
          id: invoice.metadata.customerPaymentIntentId,
          _prepend: {
-            stripeInvoiceHistory: invoice,
-            transactionRemarkHistory: intent,
+            stripeInvoiceHistory: invoiceRest,
+            transactionRemarkHistory: intentRest,
          },
          _set: {
             stripeInvoiceId: invoice.id,
-            stripeInvoiceDetails: invoice,
-            transactionRemark: intent,
+            stripeInvoiceDetails: invoiceRest,
+            transactionRemark: intentRest,
             status: STATUS[intent.status],
             stripePaymentIntentId: intent.id,
          },
@@ -305,14 +310,14 @@ const handlePaymentIntent = async ({ intent, datahub, stripeAccountId }) => {
       await datahub.request(UPDATE_CART, {
          pk_columns: { id: invoice.metadata.cartId },
          _prepend: {
-            stripeInvoiceHistory: invoice,
-            transactionRemarkHistory: intent,
+            stripeInvoiceHistory: invoiceRest,
+            transactionRemarkHistory: intentRest,
          },
          _set: {
             stripeInvoiceId: invoice.id,
-            stripeInvoiceDetails: invoice,
+            stripeInvoiceDetails: invoiceRest,
             transactionId: intent.id,
-            transactionRemark: intent,
+            transactionRemark: intentRest,
             paymentStatus: STATUS[intent.status],
          },
       })
