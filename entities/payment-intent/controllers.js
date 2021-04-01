@@ -87,9 +87,12 @@ export const create = async (req, res) => {
          transferGroup,
          paymentMethod,
          organizationId,
+         stripeInvoiceId,
          stripeCustomerId,
          stripeAccountType,
          statementDescriptor,
+         paymentRetryAttempt,
+         stripePaymentIntentId,
       } = req.body.event.data.new
 
       const { organization } = await client.request(ORGANIZATION, {
@@ -102,6 +105,47 @@ export const create = async (req, res) => {
       )
 
       if (stripeAccountType === 'standard') {
+         // RE ATTEMPT
+         let previousInvoice = null
+         if (stripeInvoiceId) {
+            previousInvoice = await stripe.invoices.retrieve(stripeInvoiceId, {
+               stripeAccount: organization.stripeAccountId,
+            })
+         }
+         if (
+            previousInvoice &&
+            previousInvoice.status !== 'void' &&
+            req.body.event.data.new.amount !== req.body.event.data.old.amount
+         ) {
+            const invoice = await stripe.invoices.pay(
+               stripeInvoiceId,
+               { payment_method: paymentMethod },
+               { stripeAccount: organization.stripeAccountId }
+            )
+            console.log('invoice', invoice.id)
+            await handleInvoice({ invoice, datahub })
+
+            if (invoice.payment_intent) {
+               const intent = await stripe.paymentIntents.retrieve(
+                  invoice.payment_intent,
+                  { stripeAccount: organization.stripeAccountId }
+               )
+               console.log('intent', intent.id)
+               await handlePaymentIntent({
+                  intent,
+                  datahub,
+                  stripeAccountId: organization.stripeAccountId,
+               })
+            }
+            return res.status(200).json({ success: true, data: invoice })
+         }
+
+         if (previousInvoice && stripeInvoiceId) {
+            await stripe.invoices.voidInvoice(stripeInvoiceId, {
+               stripeAccount: organization.stripeAccountId,
+            })
+         }
+         // CREATE NEW INVOICE
          const item = await stripe.invoiceItems.create(
             {
                amount,
@@ -145,13 +189,13 @@ export const create = async (req, res) => {
             { stripeAccount: organization.stripeAccountId }
          )
          console.log('finalizedInvoice', finalizedInvoice.id)
-         await handleInvoice({ invoice, datahub })
+         await handleInvoice({ invoice: finalizedInvoice, datahub })
 
          const result = await stripe.invoices.pay(finalizedInvoice.id, {
             stripeAccount: organization.stripeAccountId,
          })
          console.log('result', result.id)
-         await handleInvoice({ invoice, datahub })
+         await handleInvoice({ invoice: result, datahub })
 
          if (result.payment_intent) {
             const paymentIntent = await stripe.paymentIntents.retrieve(
