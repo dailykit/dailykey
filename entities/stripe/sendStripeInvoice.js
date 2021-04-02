@@ -38,7 +38,9 @@ export const sendStripeInvoice = async (req, res) => {
             stripeAccount: organization.stripeAccountId,
          })
       } else {
-         await stripe.invoices.sendInvoice(id)
+         await stripe.invoices.sendInvoice(id, {
+            stripeAccount: organization.stripeAccountId,
+         })
       }
 
       return res.status(200).json({
