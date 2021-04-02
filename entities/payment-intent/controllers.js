@@ -137,7 +137,11 @@ export const create = async (req, res) => {
                   stripeAccountId: organization.stripeAccountId,
                })
             }
-            return res.status(200).json({ success: true, data: invoice })
+            return res.status(200).json({
+               success: true,
+               data: invoice,
+               message: 'Payment has been reattempted',
+            })
          }
 
          if (previousInvoice && stripeInvoiceId) {
@@ -202,8 +206,11 @@ export const create = async (req, res) => {
                stripeAccountId: organization.stripeAccountId,
             })
          }
-
-         return res.status(200).json({ success: true, data: result })
+         return res.status(200).json({
+            data: result,
+            success: true,
+            message: 'New invoice payment has been made',
+         })
       } else {
          const intent = await stripe.paymentIntents.create({
             amount,
@@ -337,25 +344,27 @@ const handleInvoice = async ({ invoice, datahub }) => {
          },
       })
 
+      const dailycloak_history_objects = [
+         {
+            customerPaymentIntentId: invoice.metadata.customerPaymentIntentId,
+            stripeInvoiceDetails: invoice,
+            stripeInvoiceId: invoice.id,
+            type: 'INVOICE',
+            status: invoice.status,
+         },
+      ]
+      if (intent) {
+         dailycloak_history_objects.push({
+            status: intent.status,
+            type: 'PAYMENT_INTENT',
+            transactionRemark: intent,
+            stripePaymentIntentId: intent.id,
+            customerPaymentIntentId: invoice.metadata.customerPaymentIntentId,
+         })
+      }
+
       await client.request(DAILYCLOAK_INSERT_STRIPE_PAYMENT_HISTORY, {
-         objects: [
-            {
-               customerPaymentIntentId:
-                  invoice.metadata.customerPaymentIntentId,
-               stripeInvoiceDetails: invoice,
-               stripeInvoiceId: invoice.id,
-               type: 'INVOICE',
-               status: invoice.status,
-            },
-            ...(intent && {
-               status: intent.status,
-               type: 'PAYMENT_INTENT',
-               transactionRemark: intent,
-               stripePaymentIntentId: intent.id,
-               customerPaymentIntentId:
-                  invoice.metadata.customerPaymentIntentId,
-            }),
-         ],
+         objects: dailycloak_history_objects,
       })
 
       await datahub.request(UPDATE_CART, {
@@ -371,23 +380,28 @@ const handleInvoice = async ({ invoice, datahub }) => {
          },
       })
 
+      const datahub_history_objects = [
+         {
+            cartId: invoice.metadata.cartId,
+            stripeInvoiceDetails: invoice,
+            stripeInvoiceId: invoice.id,
+            type: 'INVOICE',
+            status: invoice.status,
+         },
+      ]
+
+      if (intent) {
+         datahub_history_objects.push({
+            status: intent.status,
+            type: 'PAYMENT_INTENT',
+            transactionId: intent.id,
+            transactionRemark: intent,
+            cartId: invoice.metadata.cartId,
+         })
+      }
+
       await datahub.request(DATAHUB_INSERT_STRIPE_PAYMENT_HISTORY, {
-         objects: [
-            {
-               cartId: invoice.metadata.cartId,
-               stripeInvoiceDetails: invoice,
-               stripeInvoiceId: invoice.id,
-               type: 'INVOICE',
-               status: invoice.status,
-            },
-            ...(intent && {
-               status: intent.status,
-               type: 'PAYMENT_INTENT',
-               transactionId: intent.id,
-               transactionRemark: intent,
-               cartId: invoice.metadata.cartId,
-            }),
-         ],
+         objects: datahub_history_objects,
       })
    } catch (error) {
       throw error
@@ -410,6 +424,7 @@ const handlePaymentIntent = async ({ intent, datahub, stripeAccountId }) => {
             stripePaymentIntentId: intent.id,
          },
       })
+
       await client.request(DAILYCLOAK_INSERT_STRIPE_PAYMENT_HISTORY, {
          objects: [
             {
@@ -440,23 +455,26 @@ const handlePaymentIntent = async ({ intent, datahub, stripeAccountId }) => {
             paymentStatus: STATUS[intent.status],
          },
       })
+      const datahub_history_objects = [
+         {
+            cartId: invoice.metadata.cartId,
+            stripeInvoiceDetails: invoice,
+            stripeInvoiceId: invoice.id,
+            type: 'INVOICE',
+            status: invoice.status,
+         },
+      ]
+      if (intent) {
+         datahub_history_objects.push({
+            status: intent.status,
+            type: 'PAYMENT_INTENT',
+            transactionId: intent.id,
+            transactionRemark: intent,
+            cartId: invoice.metadata.cartId,
+         })
+      }
       await datahub.request(DATAHUB_INSERT_STRIPE_PAYMENT_HISTORY, {
-         objects: [
-            {
-               cartId: invoice.metadata.cartId,
-               stripeInvoiceDetails: invoice,
-               stripeInvoiceId: invoice.id,
-               type: 'INVOICE',
-               status: invoice.status,
-            },
-            ...(intent && {
-               status: intent.status,
-               type: 'PAYMENT_INTENT',
-               transactionId: intent.id,
-               transactionRemark: intent,
-               cartId: invoice.metadata.cartId,
-            }),
-         ],
+         objects: datahub_history_objects,
       })
    } catch (error) {
       throw error
