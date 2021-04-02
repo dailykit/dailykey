@@ -115,7 +115,7 @@ export const create = async (req, res) => {
          if (
             previousInvoice &&
             previousInvoice.status !== 'void' &&
-            req.body.event.data.new.amount !== req.body.event.data.old.amount
+            req.body.event.data.new.amount === req.body.event.data.old.amount
          ) {
             const invoice = await stripe.invoices.pay(
                stripeInvoiceId,
