@@ -61,7 +61,6 @@ const UPDATE_CUSTOMER_PAYMENT_INTENT = `
    ) {
       updateCustomerPaymentIntent(pk_columns: { id: $id }, _set: $_set) {
          id
-         stripeInvoiceHistory
       }
    }
 `
