@@ -15,6 +15,7 @@ import {
    PaymentRouter,
    createStripeCustomer,
    sendStripeInvoice,
+   sendSMS,
 } from './entities'
 
 import {
@@ -71,6 +72,7 @@ app.post('/api/webhooks/customer-by-client', createCustomerByClient)
 app.post('/api/webhooks/dailyos-stripe-status', updateDailyosStripeStatus)
 app.post('/api/webhooks/stripe/customer', createStripeCustomer)
 app.post('/api/webhooks/stripe/send-invoice', sendStripeInvoice)
+app.post('/api/webhooks/stripe/send-sms', sendSMS)
 
 app.listen(process.env.PORT, function () {
    console.log('Listening on port ' + process.env.PORT)
