@@ -87,6 +87,7 @@ export const create = async (req, res) => {
          paymentMethod,
          organizationId,
          stripeInvoiceId,
+         requires3dSecure,
          stripeCustomerId,
          stripeAccountType,
          statementDescriptor,
@@ -110,37 +111,40 @@ export const create = async (req, res) => {
             previousInvoice = await stripe.invoices.retrieve(stripeInvoiceId, {
                stripeAccount: organization.stripeAccountId,
             })
-         }
-         if (
-            previousInvoice &&
-            previousInvoice.status !== 'void' &&
-            req.body.event.data.new.amount === req.body.event.data.old.amount
-         ) {
-            const invoice = await stripe.invoices.pay(
-               stripeInvoiceId,
-               { payment_method: paymentMethod },
-               { stripeAccount: organization.stripeAccountId }
-            )
-            console.log('invoice', invoice.id)
-            await handleInvoice({ invoice, datahub })
+            const isValidForReattempt = [
+               previousInvoice,
+               previousInvoice && previousInvoice.status !== 'void',
+               req.body.event.data.new.amount ===
+                  req.body.event.data.old.amount,
+            ].every(node => node)
 
-            if (invoice.payment_intent) {
-               const intent = await stripe.paymentIntents.retrieve(
-                  invoice.payment_intent,
+            if (!requires3dSecure && isValidForReattempt) {
+               const invoice = await stripe.invoices.pay(
+                  stripeInvoiceId,
+                  { payment_method: paymentMethod },
                   { stripeAccount: organization.stripeAccountId }
                )
-               console.log('intent', intent.id)
-               await handlePaymentIntent({
-                  intent,
-                  datahub,
-                  stripeAccountId: organization.stripeAccountId,
+               console.log('invoice', invoice.id)
+               await handleInvoice({ invoice, datahub })
+
+               if (invoice.payment_intent) {
+                  const intent = await stripe.paymentIntents.retrieve(
+                     invoice.payment_intent,
+                     { stripeAccount: organization.stripeAccountId }
+                  )
+                  console.log('intent', intent.id)
+                  await handlePaymentIntent({
+                     intent,
+                     datahub,
+                     stripeAccountId: organization.stripeAccountId,
+                  })
+               }
+               return res.status(200).json({
+                  success: true,
+                  data: invoice,
+                  message: 'Payment has been reattempted',
                })
             }
-            return res.status(200).json({
-               success: true,
-               data: invoice,
-               message: 'Payment has been reattempted',
-            })
          }
 
          if (previousInvoice && stripeInvoiceId) {
@@ -160,14 +164,26 @@ export const create = async (req, res) => {
          )
          console.log('item', item.id)
 
+         if (requires3dSecure) {
+            console.log('REQUIRES 3D SECURE')
+         }
          const invoice = await stripe.invoices.create(
             {
                customer: stripeCustomerId,
                default_payment_method: paymentMethod,
                statement_descriptor:
                   statementDescriptor || organization.organizationName,
-               days_until_due: 1,
-               collection_method: 'send_invoice',
+               // days_until_due: 1,
+               // collection_method: 'send_invoice',
+               ...(requires3dSecure && {
+                  payment_settings: {
+                     payment_method_options: {
+                        card: {
+                           request_three_d_secure: 'any',
+                        },
+                     },
+                  },
+               }),
                metadata: {
                   organizationId,
                   cartId: transferGroup,
