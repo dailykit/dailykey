@@ -16,6 +16,7 @@ import {
    createStripeCustomer,
    sendStripeInvoice,
    sendSMS,
+   handleRazorpayEvents,
 } from './entities'
 
 import {
@@ -73,6 +74,7 @@ app.post('/api/webhooks/dailyos-stripe-status', updateDailyosStripeStatus)
 app.post('/api/webhooks/stripe/customer', createStripeCustomer)
 app.post('/api/webhooks/stripe/send-invoice', sendStripeInvoice)
 app.post('/api/webhooks/stripe/send-sms', sendSMS)
+app.post('/api/webhooks/razorpay', handleRazorpayEvents)
 
 app.listen(process.env.PORT, function () {
    console.log('Listening on port ' + process.env.PORT)
