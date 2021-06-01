@@ -133,8 +133,8 @@ export const requestLink = async args => {
                        email: '',
                     }),
             },
-            notes: { cartId },
             reminder_enable: true,
+            notes: { paymentId, cartId },
             notify: { sms: true, email: true },
             ...(callbackUrl.trim() && {
                callback_method: 'get',
@@ -155,9 +155,13 @@ export const requestLink = async args => {
          await client.request(UPDATE_PAYMENT_RECORD, {
             pk_columns: { id },
             _set: {
-               paymentRequestId: linkId,
+               paymentLinkId: linkId,
                paymentStatus: 'PROCESSING',
-               paymentRequestInfo: { paymentLinkUrl: short_url || '' },
+               paymentRequestInfo: {
+                  payload: {
+                     payment_link: { entity: { short_url: short_url || '' } },
+                  },
+               },
             },
          })
          return { error: 'Successfully created a payment link' }
