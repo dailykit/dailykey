@@ -1,13 +1,24 @@
+import axios from 'axios'
+import moment from 'moment'
 import Razorpay from 'razorpay'
 import { GraphQLClient } from 'graphql-request'
 
-import { UPDATE_PAYMENT_RECORD } from '../graphql'
+import { CUSTOMER, UPDATE_PAYMENT_RECORD } from '../graphql'
 
 const client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
    headers: {
       'x-hasura-admin-secret': process.env.DAILYCLOAK_ADMIN_SECRET,
    },
 })
+const dailykey = new GraphQLClient(process.env.HASURA_KEYCLOAK_URL, {
+   headers: {
+      'x-hasura-admin-secret': process.env.KEYCLOAK_ADMIN_SECRET,
+   },
+})
+
+const isObject = input => {
+   return !!input && input.constructor === Object
+}
 
 export const request = async ({ data = {}, keys = {} }) => {
    try {
@@ -74,6 +85,89 @@ export const transaction = async ({ data, payment }) => {
    } catch (error) {
       await client.request(UPDATE_PAYMENT_RECORD, {
          pk_columns: { id: payment.id },
+         _set: { paymentStatus: 'DISCARDED' },
+      })
+      throw error
+   }
+}
+
+export const requestLink = async args => {
+   const { data = {}, keys = {}, callbackUrl = '' } = args
+   try {
+      const {
+         id,
+         amount = null,
+         currency = '',
+         orderCartId: cartId = '',
+      } = data
+
+      if (!amount) throw Error('Amount is required!')
+      if (!currency) throw Error('Currency is required!')
+      if (Object.keys(keys).length === 0) throw Error('Keys are missing!')
+
+      if (!keys.publishable.id) throw Error('Missing razorpay key id!')
+      if (!keys.secret.id) throw Error('Missing razorpay key secret!')
+
+      const { customer } = await dailykey.request(CUSTOMER, {
+         keycloakId: data.customerKeycloakId,
+      })
+
+      const { status, data } = await axios.post(
+         'https://api.razorpay.com/v1/payment_links',
+         {
+            currency: currency,
+            amount: amount * 100,
+            reference_id: 'CART' + cartId,
+            expire_by: moment().add(2, 'week').unix(),
+            description: 'Payment for cart #' + cartId,
+            customer: {
+               ...(isObject(customer)
+                  ? {
+                       email: customer.email || '',
+                       name: customer.fullName || '',
+                       contact: customer.phoneNumber || '',
+                    }
+                  : {
+                       name: '',
+                       contact: '',
+                       email: '',
+                    }),
+            },
+            notes: { cartId },
+            reminder_enable: true,
+            notify: { sms: true, email: true },
+            ...(callbackUrl.trim() && {
+               callback_method: 'get',
+               callback_url: callbackUrl.trim(),
+            }),
+         },
+         {
+            headers: { 'Content-Type': 'application/json' },
+            auth: {
+               username: keys.publishable.id,
+               password: keys.secret.id,
+            },
+         }
+      )
+      if (status === 200) {
+         const { id: linkId = '', short_url = '' } = data
+
+         await client.request(UPDATE_PAYMENT_RECORD, {
+            pk_columns: { id },
+            _set: {
+               paymentRequestId: linkId,
+               paymentStatus: 'PROCESSING',
+               paymentRequestInfo: { paymentLinkUrl: short_url || '' },
+            },
+         })
+         return { error: 'Successfully created a payment link' }
+      } else {
+         return { error: 'Failed to create payment link' }
+      }
+   } catch (error) {
+      const { id } = data
+      await client.request(UPDATE_PAYMENT_RECORD, {
+         pk_columns: { id },
          _set: { paymentStatus: 'DISCARDED' },
       })
       throw error

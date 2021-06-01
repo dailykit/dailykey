@@ -63,13 +63,13 @@ export const initiate = async (req, res) => {
 
 export const processRequest = async (req, res) => {
    try {
-      const { id, paymentPartnershipId, orderCartId } = req.body.event.data.new
+      const { paymentPartnershipId } = req.body.event.data.new
 
       const { partnership = null } = await client.request(PAYMENT_PARTNERSHIP, {
          id: paymentPartnershipId,
       })
 
-      const { company = null } = partnership
+      const { callbackUrl = '', company = null } = partnership
 
       if (!company)
          throw Error('No payment provider linked with this partnership!')
@@ -87,7 +87,7 @@ export const processRequest = async (req, res) => {
          throw Error('Secret keys are required!')
       }
 
-      const { identifier } = company
+      const { type = '', identifier } = company
 
       if (!identifier in providers)
          throw Error('Missing integration with this payment provider')
@@ -99,12 +99,15 @@ export const processRequest = async (req, res) => {
             publishable: partnership.publishableConfig,
             secret: partnership.secretConfig,
          },
+         ...(type === 'Payment Links' && {
+            callbackUrl: callbackUrl || '',
+         }),
          data: { ...req.body.event.data.new, currency: partnership.currency },
       })
 
       return res.status(200).json({ success: true, data: request })
    } catch (error) {
-      logger('/api/payment/request/process', JSON.stringify(error))
+      logger('/api/payment/request/process', error)
       return res.status(400).json({ success: false, error: error.message })
    }
 }
@@ -121,9 +124,8 @@ export const processTransaction = async (req, res) => {
 
       if (!payment) throw Error('No such payment exists!')
 
-      const {
-         partnership: { company: { identifier = '' } = {} } = {},
-      } = payment
+      const { partnership: { company: { identifier = '' } = {} } = {} } =
+         payment
 
       if (!identifier) throw Error('Payment integration is not mapped yet!')
 
@@ -229,5 +231,8 @@ const providers = {
    '924bf963-28e6-4cdb-9773-0df63d04a89c': {
       request: razorpay.request,
       transaction: razorpay.transaction,
+   },
+   'aa3caaf0-b91a-4de9-a4d8-a67644cd28c6': {
+      request: razorpay.requestLink,
    },
 }

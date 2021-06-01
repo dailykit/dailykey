@@ -12,9 +12,11 @@ export const PAYMENT_PARTNERSHIP = `
             datahubUrl
             adminSecret
          }
+         callbackUrl: metaInfo(path:"callbackUrl")
          company: paymentCompany {
             id
             name
+            type
             identifier
          }
       }
@@ -44,8 +46,8 @@ export const UPDATE_PAYMENT_RECORD = `
 `
 
 export const UPDATE_CART = `
-   mutation updateCart($id: Int!, $_set: crm_orderCart_set_input!) {
-      updateCartByPK(pk_columns: { id: $id }, _set: $_set) {
+   mutation updateCart($id: Int!, $_set: order_cart_set_input!) {
+      updateCart(pk_columns: { id: $id }, _set: $_set) {
          id
       }
    }
@@ -65,6 +67,16 @@ export const PAYMENT = `
                identifier
             }
          }
+      }
+   }
+`
+
+export const CUSTOMER = `
+   query customer($keycloakId: String!) {
+      customer: platform_customer(keycloakId: $keycloakId) {
+         email
+         fullName
+         phoneNumber
       }
    }
 `
