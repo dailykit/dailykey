@@ -20,6 +20,7 @@ const client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
 export const initiate = async (req, res) => {
    try {
       const {
+         version = '',
          cartId = '',
          amount = null,
          keycloakId = null,
@@ -42,6 +43,7 @@ export const initiate = async (req, res) => {
          {
             object: {
                amount,
+               version,
                orderCartId: cartId,
                paymentStatus: 'PENDING',
                paymentRequestInfo: req.body,
@@ -63,7 +65,12 @@ export const initiate = async (req, res) => {
 
 export const processRequest = async (req, res) => {
    try {
-      const { paymentPartnershipId } = req.body.event.data.new
+      const { paymentPartnershipId, version = '' } = req.body.event.data.new
+
+      if (version !== 'v2')
+         return res
+            .status(400)
+            .json({ success: false, error: 'API version mismatch.' })
 
       const { partnership = null } = await client.request(PAYMENT_PARTNERSHIP, {
          id: paymentPartnershipId,
@@ -146,6 +153,7 @@ export const handleCart = async (req, res) => {
    try {
       const {
          id,
+         version,
          orderCartId,
          paymentStatus,
          paymentRequestInfo,
@@ -153,6 +161,11 @@ export const handleCart = async (req, res) => {
          paymentTransactionId,
          paymentTransactionInfo,
       } = req.body.event.data.new
+
+      if (version !== 'v2')
+         return res
+            .status(400)
+            .json({ success: false, error: 'API version mismatch.' })
 
       const { partnership } = await client.request(PAYMENT_PARTNERSHIP, {
          id: paymentPartnershipId,
