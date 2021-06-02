@@ -14,7 +14,7 @@ export const handleRazorpayEvents = async (req, res) => {
          paymentStatus: '',
          paymentRequestId: '',
          paymentTransactionId: '',
-         paymentRequestInfo: req.body || {},
+         paymentTransactionInfo: req.body || {},
       }
       if (event) {
          if (event === 'payment_link.paid') {

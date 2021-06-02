@@ -154,9 +154,9 @@ export const requestLink = async args => {
          await client.request(UPDATE_PAYMENT_RECORD, {
             pk_columns: { id },
             _set: {
-               paymentLinkId: linkId,
+               paymentRequestId: linkId,
                paymentStatus: 'PROCESSING',
-               paymentRequestInfo: {
+               paymentTransactionInfo: {
                   payload: {
                      payment_link: { entity: { short_url: short_url || '' } },
                   },
