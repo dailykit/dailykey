@@ -118,7 +118,6 @@ export const requestLink = async args => {
             currency: currency,
             amount: amount * 100,
             reference_id: 'CART' + cartId,
-            expire_by: moment().add(2, 'week').unix(),
             description: 'Payment for cart #' + cartId,
             customer: {
                ...(isObject(customer)
