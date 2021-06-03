@@ -50,7 +50,7 @@ app.use(
 )
 
 app.get('/api', (req, res) => {
-   res.json({ message: 'DailyKey Api' })
+   res.json({ message: 'DailyKey Api V2' })
 })
 app.use('/logs', LogRouter)
 app.use('/api/card', CardRouter)
