@@ -91,6 +91,10 @@ export const transaction = async ({ data, payment }) => {
    }
 }
 
+function randomNumber(min, max) {
+   return Math.random() * (max - min) + min
+}
+
 export const requestLink = async args => {
    const { data = {}, keys = {}, callbackUrl = '' } = args
    try {
@@ -112,13 +116,13 @@ export const requestLink = async args => {
          keycloakId: data.customerKeycloakId,
       })
 
-      const { status, data } = await axios.post(
+      const { status, data: response } = await axios.post(
          'https://api.razorpay.com/v1/payment_links',
          {
             currency: currency,
             amount: amount * 100,
-            reference_id: 'CART' + cartId,
             description: 'Payment for cart #' + cartId,
+            reference_id: 'CART' + cartId + '-' + id.slice(0, 8),
             customer: {
                ...(isObject(customer)
                   ? {
@@ -133,7 +137,7 @@ export const requestLink = async args => {
                     }),
             },
             reminder_enable: true,
-            notes: { paymentId, cartId },
+            notes: { paymentId: id, cartId },
             notify: { sms: true, email: true },
             ...(callbackUrl.trim() && {
                callback_method: 'get',
@@ -149,7 +153,7 @@ export const requestLink = async args => {
          }
       )
       if (status === 200) {
-         const { id: linkId = '', short_url = '' } = data
+         const { id: linkId = '', short_url = '' } = response
 
          await client.request(UPDATE_PAYMENT_RECORD, {
             pk_columns: { id },
