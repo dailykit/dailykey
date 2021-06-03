@@ -21,6 +21,7 @@ export const initiate = async (req, res) => {
    try {
       const {
          cartId = '',
+         version = '',
          amount = null,
          keycloakId = null,
          partnershipId = null,
@@ -42,6 +43,7 @@ export const initiate = async (req, res) => {
          {
             object: {
                amount,
+               version,
                orderCartId: cartId,
                paymentStatus: 'PENDING',
                paymentRequestInfo: req.body,
@@ -63,7 +65,12 @@ export const initiate = async (req, res) => {
 
 export const processRequest = async (req, res) => {
    try {
-      const { id, paymentPartnershipId, orderCartId } = req.body.event.data.new
+      const { id, paymentPartnershipId, version = '' } = req.body.event.data.new
+
+      if (version !== 'v1')
+         return res
+            .status(400)
+            .json({ success: false, error: 'API version mismatch.' })
 
       const { partnership = null } = await client.request(PAYMENT_PARTNERSHIP, {
          id: paymentPartnershipId,
@@ -121,9 +128,8 @@ export const processTransaction = async (req, res) => {
 
       if (!payment) throw Error('No such payment exists!')
 
-      const {
-         partnership: { company: { identifier = '' } = {} } = {},
-      } = payment
+      const { partnership: { company: { identifier = '' } = {} } = {} } =
+         payment
 
       if (!identifier) throw Error('Payment integration is not mapped yet!')
 
@@ -145,12 +151,18 @@ export const handleCart = async (req, res) => {
       const {
          id,
          orderCartId,
+         version = '',
          paymentStatus,
          paymentRequestInfo,
          paymentPartnershipId,
          paymentTransactionId,
          paymentTransactionInfo,
       } = req.body.event.data.new
+
+      if (version !== 'v1')
+         return res
+            .status(400)
+            .json({ success: false, error: 'API version mismatch.' })
 
       const { partnership } = await client.request(PAYMENT_PARTNERSHIP, {
          id: paymentPartnershipId,
