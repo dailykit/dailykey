@@ -234,6 +234,10 @@ export const discard = async (req, res) => {
          pk_columns: { id: paymentId },
          _set: { paymentStatus: 'DISCARDED' },
       })
+      return res.status(200).json({
+         success: true,
+         message: 'Payment attempt has been discarded.',
+      })
    } catch (error) {
       logger('/api/payment/discard', JSON.stringify(error))
       return res.status(400).json({ success: false, error: error.message })
