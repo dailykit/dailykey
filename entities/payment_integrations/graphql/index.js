@@ -58,12 +58,17 @@ export const PAYMENT = `
       payment: paymentHub_payment_by_pk(id: $id) {
          id
          orderCartId
+         paymentRequestId
          partnership: paymentPartnership {
+            id
+            secretId: secretConfig(path: "id")
+            clientId: publishableConfig(path: "id")
             organization {
                datahubUrl
                adminSecret
             }
             company: paymentCompany {
+               type
                identifier
             }
          }

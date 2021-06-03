@@ -1,4 +1,6 @@
+import axios from 'axios'
 import moment from 'moment'
+import get from 'lodash.get'
 import { GraphQLClient } from 'graphql-request'
 
 import {
@@ -229,6 +231,25 @@ export const discard = async (req, res) => {
    try {
       const { paymentId = '' } = req.body
       if (!paymentId) throw Error('Payment Id is required!')
+
+      const { payment } = await client.request(PAYMENT, { id: paymentId })
+      let type = get(payment, 'partnership.company.type')
+
+      if (
+         type === 'Payment Links' &&
+         payment.paymentRequestId &&
+         payment.paymentRequestId.startsWith('plink')
+      ) {
+         let clientId = get(payment, 'partnership.clientId')
+         let secretId = get(payment, 'partnership.secretId')
+
+         if (clientId && secretId) {
+            const URL = `https://api.razorpay.com/v1/payment_links/${payment.paymentRequestId}/cancel`
+            const auth = { username: clientId, password: secretId }
+            const headers = { 'Content-type': 'application/json' }
+            axios.post(URL, {}, { auth, headers })
+         }
+      }
 
       await client.request(UPDATE_PAYMENT_RECORD, {
          pk_columns: { id: paymentId },
