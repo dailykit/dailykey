@@ -91,10 +91,6 @@ export const transaction = async ({ data, payment }) => {
    }
 }
 
-function randomNumber(min, max) {
-   return Math.random() * (max - min) + min
-}
-
 export const requestLink = async args => {
    const { data = {}, keys = {}, callbackUrl = '' } = args
    try {

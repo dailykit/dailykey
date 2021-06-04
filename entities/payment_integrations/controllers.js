@@ -4,6 +4,7 @@ import get from 'lodash.get'
 import { GraphQLClient } from 'graphql-request'
 
 import {
+   CART,
    PAYMENT,
    UPDATE_CART,
    PAYMENT_PARTNERSHIP,
@@ -173,32 +174,31 @@ export const handleCart = async (req, res) => {
          id: paymentPartnershipId,
       })
 
-      if (!partnership)
+      if (!get(partnership, 'id'))
          throw Error('No payment provider linked with this partnership!')
-
-      if (!('organization' in partnership))
+      if (!get(partnership, 'organization.id'))
          throw Error('No organization is linked with partnership!')
-      if (
-         !('datahubUrl' in partnership.organization || {}) &&
-         !partnership.organization.datahubUrl
-      )
+      if (!get(partnership, 'organization.datahubUrl'))
          throw Error('Missing datahub url!')
-      if (
-         !('adminSecret' in partnership.organization || {}) &&
-         !partnership.organization.adminSecret
-      )
+      if (!get(partnership, 'organization.adminSecret'))
          throw Error('Missing admin secret!')
 
-      const datahubClient = new GraphQLClient(
-         partnership.organization.datahubUrl,
-         {
-            headers: {
-               'x-hasura-admin-secret': partnership.organization.adminSecret,
-            },
-         }
-      )
+      const { datahubUrl = '', adminSecret = '' } = partnership.organization
+      const datahub = new GraphQLClient(datahubUrl, {
+         headers: { 'x-hasura-admin-secret': adminSecret },
+      })
 
-      await datahubClient.request(UPDATE_CART, {
+      const { cart } = await datahub.request(CART, { id: orderCartId })
+
+      if (get(cart, 'id') && cart.paymentStatus === 'SUCCEEDED') {
+         return res.status(200).json({
+            success: true,
+            message:
+               "Could not update the cart, since cart's payment has succeeded",
+         })
+      }
+
+      await datahub.request(UPDATE_CART, {
          id: orderCartId,
          _set: {
             ...(paymentStatus === 'DISCARDED'
@@ -220,6 +220,7 @@ export const handleCart = async (req, res) => {
                  }),
          },
       })
+
       return res.status(200).json({ success: true, message: 'Cart updated!' })
    } catch (error) {
       logger('/api/payment/cart', JSON.stringify(error))

@@ -9,6 +9,7 @@ export const PAYMENT_PARTNERSHIP = `
          secretConfig
          isPayoutRequired
          organization {
+            id
             datahubUrl
             adminSecret
          }
@@ -82,6 +83,15 @@ export const CUSTOMER = `
          email
          fullName
          phoneNumber
+      }
+   }
+`
+
+export const CART = `
+   query cart($id: Int!) {
+      cart(id: $id) {
+         id
+         paymentStatus
       }
    }
 `

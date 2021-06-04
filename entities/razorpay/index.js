@@ -24,9 +24,9 @@ export const handleRazorpayEvents = async (req, res) => {
             variables.paymentTransactionId =
                get(req.body, 'payload.payment.entity.id') || null
          } else if (event === 'payment_link.cancelled') {
-            variables.paymentStatus = 'FAILED'
+            variables.paymentStatus = 'CANCELLED'
          } else if (event === 'payment_link.expired') {
-            variables.paymentStatus = 'FAILED'
+            variables.paymentStatus = 'EXPIRED'
          } else {
             return res.status(401).json({
                success: false,
