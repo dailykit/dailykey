@@ -1,3 +1,4 @@
+import get from 'lodash.get'
 import { GraphQLClient } from 'graphql-request'
 
 import { logger } from '../../utils'
@@ -17,9 +18,25 @@ export const createCustomerPaymentIntent = async (req, res) => {
          statementDescriptor = '',
       } = req.body
 
-      const { organization } = await client.request(FETCH_ORG_CA_ID, {
+      const { organization } = await client.request(ORGANIZATION, {
          id: organizationId,
       })
+
+      const datahub = new GraphQLClient(
+         `https://${organization.organizationUrl}/datahub/v1/graphql`,
+         { headers: { 'x-hasura-admin-secret': organization.adminSecret } }
+      )
+
+      const { cart: orderCart } = await datahub.request(CART, { id: cart.id })
+
+      if (get(orderCart, 'id') && orderCart.paymentStatus === 'SUCCEEDED') {
+         return res.status(200).json({
+            success: true,
+            message:
+               "Could not proceed with payment, since cart's payment has already succeeded",
+         })
+      }
+
       const { customerPaymentIntents } = await client.request(
          FETCH_CUSTOMER_PAYMENT_INTENT,
          {
@@ -104,10 +121,12 @@ export const createCustomerPaymentIntent = async (req, res) => {
    }
 }
 
-const FETCH_ORG_CA_ID = `
+const ORGANIZATION = `
    query organization($id: Int!) {
       organization(id: $id) {
          currency
+         datahubUrl
+         adminSecret
          chargeFixed
          chargeCurrency
          stripeAccountId
@@ -161,6 +180,15 @@ const RETRY_CUSTOMER_PAYMENT_INTENT = `
          stripeInvoiceId
          stripePaymentIntentId
          transferGroup
+      }
+   }
+`
+
+const CART = `
+   query cart($id: Int!) {
+      cart(id: $id) {
+         id
+         paymentStatus
       }
    }
 `

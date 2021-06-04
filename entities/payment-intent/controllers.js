@@ -21,6 +21,7 @@ const ORGANIZATION = `
    query organization($id: Int!) {
       organization(id: $id) {
          id
+         datahubUrl
          adminSecret
          organizationUrl
          stripeAccountId
@@ -76,6 +77,15 @@ const UPDATE_CART = `
    }
 `
 
+const CART = `
+   query cart($id: Int!) {
+      cart(id: $id) {
+         id
+         paymentStatus
+      }
+   }
+`
+
 export const create = async (req, res) => {
    try {
       const {
@@ -91,18 +101,27 @@ export const create = async (req, res) => {
          stripeCustomerId,
          stripeAccountType,
          statementDescriptor,
-         paymentRetryAttempt,
-         stripePaymentIntentId,
       } = req.body.event.data.new
 
       const { organization } = await client.request(ORGANIZATION, {
          id: organizationId,
       })
 
-      const datahub = new GraphQLClient(
-         `https://${organization.organizationUrl}/datahub/v1/graphql`,
-         { headers: { 'x-hasura-admin-secret': organization.adminSecret } }
-      )
+      const datahub = new GraphQLClient(organization.datahubUrl, {
+         headers: { 'x-hasura-admin-secret': organization.adminSecret },
+      })
+
+      const { cart } = await datahub.request(CART, {
+         id: Number(transferGroup),
+      })
+
+      if (get(cart, 'id') && cart.paymentStatus === 'SUCCEEDED') {
+         return res.status(200).json({
+            success: true,
+            message:
+               "Could not create payment intent or invoice, since cart's payment has already succeeded",
+         })
+      }
 
       if (stripeAccountType === 'standard') {
          // RE ATTEMPT
@@ -124,7 +143,6 @@ export const create = async (req, res) => {
                   { payment_method: paymentMethod },
                   { stripeAccount: organization.stripeAccountId }
                )
-               console.log('invoice', invoice.id)
                await handleInvoice({ invoice, datahub })
 
                if (invoice.payment_intent) {
@@ -132,7 +150,6 @@ export const create = async (req, res) => {
                      invoice.payment_intent,
                      { stripeAccount: organization.stripeAccountId }
                   )
-                  console.log('intent', intent.id)
                   await handlePaymentIntent({
                      intent,
                      datahub,
@@ -162,7 +179,6 @@ export const create = async (req, res) => {
             },
             { stripeAccount: organization.stripeAccountId }
          )
-         console.log('item', item.id)
 
          if (requires3dSecure) {
             console.log('REQUIRES 3D SECURE')
@@ -173,8 +189,6 @@ export const create = async (req, res) => {
                default_payment_method: paymentMethod,
                statement_descriptor:
                   statementDescriptor || organization.organizationName,
-               // days_until_due: 1,
-               // collection_method: 'send_invoice',
                ...(requires3dSecure && {
                   payment_settings: {
                      payment_method_options: {
@@ -193,20 +207,17 @@ export const create = async (req, res) => {
             },
             { stripeAccount: organization.stripeAccountId }
          )
-         console.log('invoice', invoice.id)
          await handleInvoice({ invoice, datahub })
 
          const finalizedInvoice = await stripe.invoices.finalizeInvoice(
             invoice.id,
             { stripeAccount: organization.stripeAccountId }
          )
-         console.log('finalizedInvoice', finalizedInvoice.id)
          await handleInvoice({ invoice: finalizedInvoice, datahub })
 
          const result = await stripe.invoices.pay(finalizedInvoice.id, {
             stripeAccount: organization.stripeAccountId,
          })
-         console.log('result', result.id)
          await handleInvoice({ invoice: result, datahub })
 
          if (result.payment_intent) {
@@ -214,7 +225,6 @@ export const create = async (req, res) => {
                result.payment_intent,
                { stripeAccount: organization.stripeAccountId }
             )
-            console.log('paymentIntent', paymentIntent.id)
             await handlePaymentIntent({
                datahub,
                intent: paymentIntent,
