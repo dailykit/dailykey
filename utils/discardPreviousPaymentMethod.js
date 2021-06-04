@@ -227,7 +227,7 @@ const STRIPE_TRANSACTIONS = `
    }
 `
 
-const UPDATE_RAZORPAY_PAYMENT = gql`
+const UPDATE_RAZORPAY_PAYMENT = `
    mutation updatePayment(
       $id: uuid!
       $_set: paymentHub_payment_set_input = {}
