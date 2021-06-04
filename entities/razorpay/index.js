@@ -16,6 +16,24 @@ export const handleRazorpayEvents = async (req, res) => {
          paymentTransactionId: '',
          paymentTransactionInfo: req.body || {},
       }
+      const paymentId = get(
+         req.body,
+         'payload.payment_link.entity.notes.paymentId'
+      )
+
+      if (paymentId) {
+         const { payment } = await client.request(PAYMENT_RECORD, {
+            id: paymentId,
+         })
+         const isAutoCancelled = get(payment, 'isAutoCancelled')
+         if (isAutoCancelled) {
+            return res.status(200).json({
+               success: true,
+               error: 'Aborting since payment was auto cancelled on different payment method attempt!',
+            })
+         }
+      }
+
       if (event) {
          if (event === 'payment_link.paid') {
             variables.paymentStatus = 'SUCCEEDED'
@@ -34,10 +52,6 @@ export const handleRazorpayEvents = async (req, res) => {
             })
          }
 
-         const paymentId = get(
-            req.body,
-            'payload.payment_link.entity.notes.paymentId'
-         )
          if (paymentId) {
             const { updatePaymentTransaction } = await client.request(
                UPDATE_PAYMENT_RECORD,
@@ -76,6 +90,15 @@ const UPDATE_PAYMENT_RECORD = `
          _set: $_set
       ) {
          id
+      }
+   }
+`
+
+const PAYMENT_RECORD = `
+   query payment($id: uuid!) {
+      payment: paymentHub_payment_by_pk(id: $id) {
+         id
+         isAutoCancelled
       }
    }
 `
