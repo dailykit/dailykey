@@ -11,7 +11,7 @@ import {
    INSERT_PAYMENT_RECORD,
    UPDATE_PAYMENT_RECORD,
 } from './graphql'
-import { logger } from '../../utils'
+import { discardPreviousPaymentMethod, logger } from '../../utils'
 import * as razorpay from './razorpay'
 
 const client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
@@ -38,6 +38,13 @@ export const initiate = async (req, res) => {
       const { partnership = null } = await client.request(PAYMENT_PARTNERSHIP, {
          id: partnershipId,
       })
+
+      if (partnership.organization) {
+         await discardPreviousPaymentMethod({
+            cartId: cart.id,
+            organization: partnership.organization,
+         })
+      }
 
       if (!partnership) throw Error('Partnership does not exist!')
 

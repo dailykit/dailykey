@@ -2,6 +2,8 @@ import axios from 'axios'
 import get from 'lodash.get'
 import { GraphQLClient } from 'graphql-request'
 
+import stripe from '../lib/stripe'
+
 const dailycloak = new GraphQLClient(process.env.DAILYCLOAK_URL, {
    headers: { 'x-hasura-admin-secret': process.env.DAILYCLOAK_ADMIN_SECRET },
 })
@@ -18,10 +20,14 @@ export const discardPreviousPaymentMethod = async args => {
       let type = ''
       if (cart.paymentId) {
          type = 'razorpay'
+      } else if (cart.stripeInvoiceId || cart.paymentRetryAttempt > 0) {
+         type = 'stripe'
       }
 
       if (type === 'razorpay') {
          await handleRazorpay({ ...args, datahub })
+      } else if (type === 'stripe') {
+         await handleStripe({ ...args, datahub })
       }
       return
    } catch (error) {
@@ -108,6 +114,91 @@ const handleRazorpay = async args => {
    }
 }
 
+const handleStripe = async args => {
+   try {
+      const { cartId, organization = {} } = args
+      const { payments = [] } = await dailycloak.request(STRIPE_TRANSACTIONS, {
+         where: {
+            transferGroup: { _eq: '' + cartId },
+            organizationId: { _eq: organization.id },
+         },
+      })
+
+      if (payments.length === 0) return
+
+      const { organization: org } = await dailycloak.request(ORGANIZATION, {
+         id: organization.id,
+      })
+
+      const { stripeAccountId, stripeAccountType } = org
+
+      await Promise.all(
+         payments.map(async payment => {
+            try {
+               const { id, stripeInvoiceId, stripePaymentIntentId } = payment
+               if (stripeInvoiceId) {
+                  const { status = '' } = await stripe.invoices.voidInvoice(
+                     stripeInvoiceId,
+                     ...(stripeAccountType === 'standard' &&
+                        stripeAccountId && {
+                           stripeAccount: stripeAccountId,
+                        })
+                  )
+                  if (status === 'void') {
+                     await dailycloak.request(UPDATE_STRIPE_PAYMENT, {
+                        id: id,
+                        _set: {
+                           isAutoCancelled: true,
+                           paymentStatus: 'CANCELLED',
+                        },
+                     })
+                     return {
+                        success: true,
+                        message: 'Stripe invoice has been voided!',
+                     }
+                  } else {
+                     return {
+                        success: false,
+                        message: 'Failed to void stripe invoice!',
+                     }
+                  }
+               } else if (stripePaymentIntentId && !stripeInvoiceId) {
+                  const { status } = await stripe.paymentIntents.cancel(
+                     stripePaymentIntentId,
+                     ...(stripeAccountType === 'standard' &&
+                        stripeAccountId && {
+                           stripeAccount: stripeAccountId,
+                        })
+                  )
+                  if (status === 'cancelled') {
+                     await dailycloak.request(UPDATE_STRIPE_PAYMENT, {
+                        id: id,
+                        _set: {
+                           isAutoCancelled: true,
+                           paymentStatus: 'CANCELLED',
+                        },
+                     })
+                     return {
+                        success: true,
+                        message: 'Stripe payment intent has been voided!',
+                     }
+                  } else {
+                     return {
+                        success: false,
+                        message: 'Failed to cancel stripe payment intent!',
+                     }
+                  }
+               }
+            } catch (error) {
+               return { success: false, error }
+            }
+         })
+      )
+   } catch (error) {
+      throw error
+   }
+}
+
 const RAZORPAY_TRANSACTIONS = `
    query payments($where: paymentHub_payment_bool_exp = {}) {
       payments: paymentHub_payment(where: $where) {
@@ -122,6 +213,16 @@ const RAZORPAY_TRANSACTIONS = `
                identifier
             }
          }
+      }
+   }
+`
+
+const STRIPE_TRANSACTIONS = `
+   query payments($where: stripe_customerPaymentIntent_bool_exp = {}) {
+      payments: customerPaymentIntents(where: $where) {
+         id
+         stripeInvoiceId
+         stripePaymentIntentId
       }
    }
 `
@@ -147,6 +248,31 @@ const CART = `
          paymentId
          paymentStatus
          stripeInvoiceId
+         paymentRetryAttempt 
+      }
+   }
+`
+
+const ORGANIZATION = `
+   query organization($id: Int!) {
+      organization(id: $id) {
+         id
+         stripeAccountId
+         stripeAccountType
+      }
+   }
+`
+
+const UPDATE_STRIPE_PAYMENT = `
+   mutation updatePayment(
+      $id: uuid!
+      $_set: stripe_customerPaymentIntent_set_input = {}
+   ) {
+      updatePayment: updateCustomerPaymentIntent(
+         pk_columns: { id: $id }
+         _set: $_set
+      ) {
+         id
       }
    }
 `
