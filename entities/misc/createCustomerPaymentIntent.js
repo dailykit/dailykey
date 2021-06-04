@@ -1,7 +1,7 @@
 import get from 'lodash.get'
 import { GraphQLClient } from 'graphql-request'
 
-import { logger } from '../../utils'
+import { logger, discardPreviousPaymentMethod } from '../../utils'
 
 const client = new GraphQLClient(process.env.DAILYCLOAK_URL, {
    headers: {
@@ -22,10 +22,9 @@ export const createCustomerPaymentIntent = async (req, res) => {
          id: organizationId,
       })
 
-      const datahub = new GraphQLClient(
-         `https://${organization.organizationUrl}/datahub/v1/graphql`,
-         { headers: { 'x-hasura-admin-secret': organization.adminSecret } }
-      )
+      const datahub = new GraphQLClient(organization.datahubUrl, {
+         headers: { 'x-hasura-admin-secret': organization.adminSecret },
+      })
 
       const { cart: orderCart } = await datahub.request(CART, { id: cart.id })
 
@@ -36,6 +35,15 @@ export const createCustomerPaymentIntent = async (req, res) => {
                "Could not proceed with payment, since cart's payment has already succeeded",
          })
       }
+
+      await discardPreviousPaymentMethod({
+         cartId: cart.id,
+         organization: {
+            id: organization.id,
+            datahubUrl: organization.datahubUrl,
+            adminSecret: organization.adminSecret,
+         },
+      })
 
       const { customerPaymentIntents } = await client.request(
          FETCH_CUSTOMER_PAYMENT_INTENT,
@@ -116,7 +124,7 @@ export const createCustomerPaymentIntent = async (req, res) => {
          }
       }
    } catch (error) {
-      logger('/api/initiate-payment', error.message)
+      logger('/api/initiate-payment', error)
       return res.status(404).json({ success: false, error: error.message })
    }
 }
@@ -124,6 +132,7 @@ export const createCustomerPaymentIntent = async (req, res) => {
 const ORGANIZATION = `
    query organization($id: Int!) {
       organization(id: $id) {
+         id
          currency
          datahubUrl
          adminSecret
