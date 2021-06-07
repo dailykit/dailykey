@@ -215,7 +215,7 @@ export const handleCart = async (req, res) => {
       await datahub.request(UPDATE_CART, {
          id: orderCartId,
          _set: {
-            ...(paymentStatus === 'DISCARDED'
+            ...(['DISCARDED', 'CANCELLED'].includes(paymentStatus)
                ? {
                     paymentId: null,
                     transactionId: null,
