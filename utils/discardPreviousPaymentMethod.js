@@ -10,17 +10,20 @@ const dailycloak = new GraphQLClient(process.env.DAILYCLOAK_URL, {
 
 export const discardPreviousPaymentMethod = async args => {
    try {
-      const { organization = {} } = args
+      const { cartId, origin = '', organization = {} } = args
       const datahub = new GraphQLClient(organization.datahubUrl, {
          headers: { 'x-hasura-admin-secret': organization.adminSecret },
       })
 
-      const { cart } = await datahub.request(CART, { id: cart.id })
+      const { cart } = await datahub.request(CART, { id: cartId })
 
       let type = ''
       if (cart.paymentId) {
          type = 'razorpay'
-      } else if (cart.stripeInvoiceId || cart.paymentRetryAttempt > 0) {
+      } else if (
+         origin !== 'stripe' &&
+         (cart.stripeInvoiceId || cart.paymentRetryAttempt > 0)
+      ) {
          type = 'stripe'
       }
 
@@ -37,7 +40,18 @@ export const discardPreviousPaymentMethod = async args => {
 
 const handleRazorpay = async args => {
    try {
-      const { cartId, organization = {} } = args
+      const { cartId, organization = {}, datahub } = args
+
+      await datahub.request(UPDATE_CART, {
+         id: cartId,
+         _set: {
+            paymentId: null,
+            transactionId: null,
+            paymentRequestInfo: null,
+            paymentUpdatedAt: null,
+            transactionRemark: null,
+         },
+      })
 
       const { payments = [] } = await dailycloak.request(
          RAZORPAY_TRANSACTIONS,
@@ -51,7 +65,7 @@ const handleRazorpay = async args => {
 
       if (payments.length === 0) return
 
-      await Promise.all(
+      const result = await Promise.all(
          payments.map(async payment => {
             try {
                const { paymentRequestId } = payment
@@ -63,7 +77,7 @@ const handleRazorpay = async args => {
 
                if (paymentRequestId.startsWith('order'))
                   return {
-                     success: false,
+                     success: true,
                      message: 'Razorpay orders are not cancellable!',
                   }
 
@@ -86,9 +100,15 @@ const handleRazorpay = async args => {
                               paymentStatus: 'CANCELLED',
                            },
                         })
+
                         return {
                            success: true,
                            message: 'Successfully cancelled payment link.',
+                        }
+                     } else {
+                        return {
+                           success: false,
+                           message: 'Failed to cancel payment link.',
                         }
                      }
                   }
@@ -109,6 +129,8 @@ const handleRazorpay = async args => {
             }
          })
       )
+
+      return result
    } catch (error) {
       throw error
    }
@@ -116,7 +138,18 @@ const handleRazorpay = async args => {
 
 const handleStripe = async args => {
    try {
-      const { cartId, organization = {} } = args
+      const { cartId, organization = {}, datahub } = args
+
+      await datahub.request(UPDATE_CART, {
+         id: cartId,
+         _set: {
+            paymentId: null,
+            transactionId: null,
+            paymentRequestInfo: null,
+            paymentUpdatedAt: null,
+            transactionRemark: null,
+         },
+      })
       const { payments = [] } = await dailycloak.request(STRIPE_TRANSACTIONS, {
          where: {
             transferGroup: { _eq: '' + cartId },
@@ -132,28 +165,34 @@ const handleStripe = async args => {
 
       const { stripeAccountId, stripeAccountType } = org
 
-      await Promise.all(
+      const result = await Promise.all(
          payments.map(async payment => {
             try {
                const { id, stripeInvoiceId, stripePaymentIntentId } = payment
                if (stripeInvoiceId) {
                   const { status = '' } = await stripe.invoices.voidInvoice(
                      stripeInvoiceId,
-                     ...(stripeAccountType === 'standard' &&
-                        stripeAccountId && {
-                           stripeAccount: stripeAccountId,
-                        })
+                     {
+                        ...(stripeAccountType === 'standard' &&
+                           stripeAccountId && {
+                              stripeAccount: stripeAccountId,
+                           }),
+                     }
                   )
                   if (status === 'void') {
-                     await dailycloak.request(UPDATE_STRIPE_PAYMENT, {
-                        id: id,
-                        _set: {
-                           isAutoCancelled: true,
-                           paymentStatus: 'CANCELLED',
-                        },
-                     })
+                     const { updatePayment } = await dailycloak.request(
+                        UPDATE_STRIPE_PAYMENT,
+                        {
+                           id: id,
+                           _set: {
+                              isAutoCancelled: true,
+                              status: 'CANCELLED',
+                           },
+                        }
+                     )
                      return {
                         success: true,
+                        data: updatePayment,
                         message: 'Stripe invoice has been voided!',
                      }
                   } else {
@@ -165,21 +204,27 @@ const handleStripe = async args => {
                } else if (stripePaymentIntentId && !stripeInvoiceId) {
                   const { status } = await stripe.paymentIntents.cancel(
                      stripePaymentIntentId,
-                     ...(stripeAccountType === 'standard' &&
-                        stripeAccountId && {
-                           stripeAccount: stripeAccountId,
-                        })
+                     {
+                        ...(stripeAccountType === 'standard' &&
+                           stripeAccountId && {
+                              stripeAccount: stripeAccountId,
+                           }),
+                     }
                   )
                   if (status === 'cancelled') {
-                     await dailycloak.request(UPDATE_STRIPE_PAYMENT, {
-                        id: id,
-                        _set: {
-                           isAutoCancelled: true,
-                           paymentStatus: 'CANCELLED',
-                        },
-                     })
+                     const { updatePayment } = await dailycloak.request(
+                        UPDATE_STRIPE_PAYMENT,
+                        {
+                           id: id,
+                           _set: {
+                              isAutoCancelled: true,
+                              paymentStatus: 'CANCELLED',
+                           },
+                        }
+                     )
                      return {
                         success: true,
+                        data: updatePayment,
                         message: 'Stripe payment intent has been voided!',
                      }
                   } else {
@@ -194,6 +239,7 @@ const handleStripe = async args => {
             }
          })
       )
+      return result
    } catch (error) {
       throw error
    }
@@ -272,6 +318,14 @@ const UPDATE_STRIPE_PAYMENT = `
          pk_columns: { id: $id }
          _set: $_set
       ) {
+         id
+      }
+   }
+`
+
+const UPDATE_CART = `
+   mutation updateCart($id: Int!, $_set: order_cart_set_input!) {
+      updateCart(pk_columns: { id: $id }, _set: $_set) {
          id
       }
    }

@@ -41,7 +41,7 @@ export const initiate = async (req, res) => {
 
       if (partnership.organization) {
          await discardPreviousPaymentMethod({
-            cartId: cart.id,
+            cartId,
             organization: partnership.organization,
          })
       }

@@ -38,6 +38,7 @@ export const createCustomerPaymentIntent = async (req, res) => {
 
       await discardPreviousPaymentMethod({
          cartId: cart.id,
+         origin: 'stripe',
          organization: {
             id: organization.id,
             datahubUrl: organization.datahubUrl,
@@ -125,7 +126,7 @@ export const createCustomerPaymentIntent = async (req, res) => {
       }
    } catch (error) {
       logger('/api/initiate-payment', error)
-      return res.status(404).json({ success: false, error: error.message })
+      return res.status(500).json({ success: false, error: error.message })
    }
 }
 
