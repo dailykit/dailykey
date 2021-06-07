@@ -166,6 +166,7 @@ export const handleCart = async (req, res) => {
          version,
          orderCartId,
          paymentStatus,
+         isAutoCancelled,
          paymentRequestInfo,
          paymentPartnershipId,
          paymentTransactionId,
@@ -176,6 +177,12 @@ export const handleCart = async (req, res) => {
          return res
             .status(400)
             .json({ success: false, error: 'API version mismatch.' })
+
+      if (isAutoCancelled)
+         return res.status(200).json({
+            success: false,
+            error: 'Aborting early since payment has been cancelled automatically.',
+         })
 
       const { partnership } = await client.request(PAYMENT_PARTNERSHIP, {
          id: paymentPartnershipId,
