@@ -14,6 +14,7 @@ import {
    PaymentIntentRouter,
    PaymentRouter,
    createStripeCustomer,
+   createStripeCustomer2,
    sendStripeInvoice,
    sendSMS,
 } from './entities'
@@ -71,6 +72,7 @@ app.post('/api/webhooks/authorize-request', authorizeRequest)
 app.post('/api/webhooks/customer-by-client', createCustomerByClient)
 app.post('/api/webhooks/dailyos-stripe-status', updateDailyosStripeStatus)
 app.post('/api/webhooks/stripe/customer', createStripeCustomer)
+app.post('/api/webhooks/stripe/customer/create', createStripeCustomer2)
 app.post('/api/webhooks/stripe/send-invoice', sendStripeInvoice)
 app.post('/api/webhooks/stripe/send-sms', sendSMS)
 
